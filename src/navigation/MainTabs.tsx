@@ -1,31 +1,26 @@
 import React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList } from '../types/index';
 import HomeStack from './HomeStack';
 import CategoriesStack from './CategoriesStack';
-import WishlistScreen from '@screens/WishlistScreen';
-import CartScreen from '@screens/CartScreen';
+import CartStack from './CartStack';
 import ProfileScreen from '@screens/ProfileScreen';
 import { Colors } from '@theme/tokens';
+import { scale } from '../utils/scale';
 import { useCart } from '@context/CartContext';
+
+// SVG icons from assets
+import HomeIcon    from '../assets/icons/Vector.svg';
+import SearchIcon  from '../assets/icons/Union.svg';
+import CartIcon    from '../assets/icons/shop cart 7.svg';
+import ProfileIcon from '../assets/icons/Profile.svg';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Home: '🏠',
-    Categories: '☰',
-    Wishlist: '♡',
-    Cart: '🛒',
-    Profile: '👤',
-  };
-  return (
-    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
-      {icons[label] ?? label}
-    </Text>
-  );
-}
+const ICON_SIZE = scale(24);
+const ACTIVE_COLOR   = Colors.black;
+const INACTIVE_COLOR = '#AAAAAA';
 
 function CartTabIcon({ focused }: { focused: boolean }) {
   const { state } = useCart();
@@ -33,10 +28,14 @@ function CartTabIcon({ focused }: { focused: boolean }) {
 
   return (
     <View>
-      <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>🛒</Text>
+      <CartIcon
+        width={ICON_SIZE}
+        height={ICON_SIZE}
+        fill={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+      />
       {totalItems > 0 && (
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>{totalItems > 99 ? '99+' : totalItems}</Text>
+          <View style={styles.badgeDot} />
         </View>
       )}
     </View>
@@ -49,19 +48,26 @@ export default function MainTabs() {
       initialRouteName="Home"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.black,
-        tabBarInactiveTintColor: Colors.gray400,
+        tabBarShowLabel: false,
+        tabBarActiveTintColor: ACTIVE_COLOR,
+        tabBarInactiveTintColor: INACTIVE_COLOR,
         tabBarStyle: {
+          position: 'absolute',
           backgroundColor: Colors.white,
-          borderTopColor: Colors.gray200,
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 4,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
+          borderTopWidth: 0,
+          elevation: 12,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          height: scale(64),
+          paddingBottom: scale(8),
+          paddingTop: scale(8),
+          borderTopLeftRadius: scale(20),
+          borderTopRightRadius: scale(20),
+          left: 0,
+          right: 0,
+          bottom: 0,
         },
       }}
     >
@@ -69,31 +75,32 @@ export default function MainTabs() {
         name="Home"
         component={HomeStack}
         options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon label="Home" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <HomeIcon
+              width={ICON_SIZE}
+              height={ICON_SIZE}
+              fill={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+            />
+          ),
         }}
       />
       <Tab.Screen
         name="Categories"
         component={CategoriesStack}
         options={{
-          tabBarLabel: 'Categories',
-          tabBarIcon: ({ focused }) => <TabIcon label="Categories" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Wishlist"
-        component={WishlistScreen}
-        options={{
-          tabBarLabel: 'Wishlist',
-          tabBarIcon: ({ focused }) => <TabIcon label="Wishlist" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <SearchIcon
+              width={ICON_SIZE}
+              height={ICON_SIZE}
+              fill={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+            />
+          ),
         }}
       />
       <Tab.Screen
         name="Cart"
-        component={CartScreen}
+        component={CartStack}
         options={{
-          tabBarLabel: 'Cart',
           tabBarIcon: ({ focused }) => <CartTabIcon focused={focused} />,
         }}
       />
@@ -101,8 +108,13 @@ export default function MainTabs() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ focused }) => <TabIcon label="Profile" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <ProfileIcon
+              width={ICON_SIZE}
+              height={ICON_SIZE}
+              fill={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+            />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -112,19 +124,13 @@ export default function MainTabs() {
 const styles = StyleSheet.create({
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
-    backgroundColor: '#E53935',
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
+    top: -2,
+    right: -4,
   },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
+  badgeDot: {
+    width: scale(8),
+    height: scale(8),
+    borderRadius: scale(4),
+    backgroundColor: '#E53935',
   },
 });

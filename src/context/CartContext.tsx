@@ -11,7 +11,8 @@ import type { CartItem, CartState } from '../types';
 type CartAction =
   | { type: 'ADD_ITEM'; payload: CartItem }
   | { type: 'REMOVE_ITEM'; payload: { productId: string; selectedSize: string; selectedColor: string } }
-  | { type: 'UPDATE_QUANTITY'; payload: { productId: string; selectedSize: string; selectedColor: string; quantity: number } };
+  | { type: 'UPDATE_QUANTITY'; payload: { productId: string; selectedSize: string; selectedColor: string; quantity: number } }
+  | { type: 'CLEAR_CART' };
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -69,6 +70,9 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       };
     }
 
+    case 'CLEAR_CART':
+      return { items: [] };
+
     default:
       return state;
   }
@@ -81,6 +85,7 @@ interface CartContextValue {
   addItem: (item: CartItem) => void;
   removeItem: (productId: string, selectedSize: string, selectedColor: string) => void;
   updateQuantity: (productId: string, selectedSize: string, selectedColor: string, quantity: number) => void;
+  clearCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -115,8 +120,12 @@ export function CartProvider({ children }: CartProviderProps) {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, selectedSize, selectedColor, quantity } });
   };
 
+  const clearCart = (): void => {
+    dispatch({ type: 'CLEAR_CART' });
+  };
+
   return (
-    <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity }}>
+    <CartContext.Provider value={{ state, addItem, removeItem, updateQuantity, clearCart }}>
       {children}
     </CartContext.Provider>
   );

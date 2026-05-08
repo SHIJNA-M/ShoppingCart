@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Colors, Spacing, Typography } from '../theme/tokens';
+import { scale, vs, ms } from '../utils/scale';
 
 interface UnderlineInputProps {
   placeholder?: string;
@@ -56,23 +57,23 @@ const UnderlineInput: React.FC<UnderlineInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Spacing.md,
+    marginBottom: vs(16),
     width: '100%',
   },
   input: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.gray400,
-    paddingVertical: Spacing.sm,
-    fontSize: Typography.fontSize.base,
-    color: Colors.black,
+    paddingVertical: vs(8),
+    fontSize: ms(14),
+    color: '#332218',
     backgroundColor: 'transparent',
   },
   inputError: {
     borderBottomColor: Colors.error,
   },
   errorText: {
-    marginTop: Spacing.xs,
-    fontSize: Typography.fontSize.xs,
+    marginTop: vs(4),
+    fontSize: ms(11),
     color: Colors.error,
   },
 });

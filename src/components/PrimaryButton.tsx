@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { Colors, Spacing, Typography } from '../theme/tokens';
+import { scale, vs } from '../utils/scale';
 
 interface PrimaryButtonProps {
   label: string;
@@ -46,9 +47,9 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
 const styles = StyleSheet.create({
   button: {
     backgroundColor: Colors.black,
-    borderRadius: 4,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    borderRadius: scale(60),
+    paddingVertical: vs(14),
+    paddingHorizontal: scale(24),
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',

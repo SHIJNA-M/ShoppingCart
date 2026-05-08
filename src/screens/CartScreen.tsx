@@ -5,23 +5,30 @@ import React from 'react';
 import {
   FlatList,
   Image,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
 import PrimaryButton from '../components/PrimaryButton';
 import { BorderRadius, Colors, Spacing, Typography } from '../theme/tokens';
-import type { CartItem } from '../types';
+import { vs } from '../utils/scale';
+import type { CartItem, CartStackParamList } from '../types';
+
+type CartNavProp = NativeStackNavigationProp<CartStackParamList, 'CartMain'>;
 
 const formatPrice = (cents: number) => `$ ${(cents / 100).toFixed(2)}`;
 
 export default function CartScreen() {
   const { state, removeItem, updateQuantity } = useCart();
   const { state: productState } = useProducts();
+  const navigation = useNavigation<CartNavProp>();
+  const insets = useSafeAreaInsets();
 
   const cartItems = state.items.map((item) => ({
     ...item,
@@ -108,12 +115,14 @@ export default function CartScreen() {
       />
 
       {state.items.length > 0 && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, {
+          paddingBottom: vs(64) + (insets.bottom > 0 ? insets.bottom : Spacing.md),
+        }]}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>{formatPrice(total)}</Text>
           </View>
-          <PrimaryButton label="CHECKOUT" onPress={() => {}} />
+          <PrimaryButton label="CHECKOUT" onPress={() => navigation.navigate('Checkout', { total })} />
         </View>
       )}
     </SafeAreaView>
@@ -147,7 +156,7 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: Spacing.md,
     paddingTop: Spacing.sm,
-    paddingBottom: 120,
+    paddingBottom: Spacing.md,
     flexGrow: 1,
   },
   row: {
@@ -239,21 +248,19 @@ const styles = StyleSheet.create({
     color: Colors.gray600,
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: Colors.white,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingTop: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: Colors.gray200,
+    alignItems: 'center',
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+    width: '100%',
   },
   totalLabel: {
     fontSize: Typography.fontSize.md,

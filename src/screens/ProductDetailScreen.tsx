@@ -1,5 +1,5 @@
 /**
- * ProductDetailScreen — Figma "Single Product" screen
+ * ProductDetailScreen — matches Figma design
  */
 import React, { useState } from 'react';
 import {
@@ -8,39 +8,37 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { StackScreenProps } from '@react-navigation/stack';
 import type { HomeStackParamList } from '../types';
 import ImageCarousel from '@components/ImageCarousel';
-import SizeOption from '@components/SizeOption';
+import ColorSwatch from '@components/ColorSwatch';
 import ProductCard from '@components/ProductCard';
-import PrimaryButton from '@components/PrimaryButton';
 import { useProducts } from '@context/ProductContext';
 import { useCart } from '@context/CartContext';
 import { useWishlist } from '@context/WishlistContext';
-import { Colors, Spacing, Typography } from '@theme/tokens';
+import { Colors } from '@theme/tokens';
+import { scale, vs, ms } from '../utils/scale';
 
 type Props = StackScreenProps<HomeStackParamList, 'ProductDetail'>;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window'); // fallback for StyleSheet
 
 function formatPrice(cents: number): string {
   return `$ ${(cents / 100).toFixed(2)}`;
 }
 
-function StarRating({ rating, count }: { rating: number; count: number }) {
+function StarRating({ rating, count, size = 16 }: { rating: number; count: number; size?: number }) {
   return (
     <View style={styles.ratingRow}>
       {[1, 2, 3, 4, 5].map((star) => (
-        <Text
-          key={star}
-          style={[styles.star, star <= Math.round(rating) ? styles.starFilled : styles.starEmpty]}
-        >
+        <Text key={star} style={[styles.star, { fontSize: ms(size) }, star <= Math.round(rating) ? styles.starFilled : styles.starEmpty]}>
           ★
         </Text>
       ))}
-      <Text style={styles.ratingValue}>{rating.toFixed(1)}</Text>
       <Text style={styles.reviewCount}>({count})</Text>
     </View>
   );
@@ -51,13 +49,20 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const { state: productState } = useProducts();
   const { addItem } = useCart();
   const { state: wishlistState, toggleWishlist } = useWishlist();
+  const insets = useSafeAreaInsets();
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
 
   const product = productState.products.find((p) => p.id === productId);
 
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex]       = useState(0);
+  const [selectedSize, setSelectedSize]     = useState<string | null>(null);
+  const [selectedColor, setSelectedColor]   = useState<string | null>(
+    product?.colorOptions?.[0]?.hex ?? null,
+  );
   const [showSizePrompt, setShowSizePrompt] = useState(false);
-  const [descExpanded, setDescExpanded] = useState(false);
+  const [descExpanded, setDescExpanded]     = useState(false);
+  const [reviewsExpanded, setReviewsExpanded] = useState(true);
+  const [similarExpanded, setSimilarExpanded] = useState(true);
 
   if (!product) {
     return (
@@ -74,43 +79,52 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
     .filter((p): p is NonNullable<typeof p> => p !== undefined);
 
   const handleAddToCart = () => {
-    if (!selectedSize) {
-      setShowSizePrompt(true);
-      return;
-    }
-    addItem({ productId: product.id, selectedSize, selectedColor: '', quantity: 1 });
+    if (!selectedSize) { setShowSizePrompt(true); return; }
+    addItem({
+      productId: product.id,
+      selectedSize,
+      selectedColor: selectedColor ?? '',
+      quantity: 1,
+    });
     setShowSizePrompt(false);
   };
 
-  const descriptionText = product.description;
-  const isLongDesc = descriptionText.length > 100;
-  const displayedDesc =
-    !isLongDesc || descExpanded ? descriptionText : descriptionText.slice(0, 100) + '...';
+  const isLongDesc = product.description.length > 120;
+  const displayedDesc = !isLongDesc || descExpanded
+    ? product.description
+    : product.description.slice(0, 120) + '...';
+
+  const FOOTER_H = vs(64) + vs(72) + (insets.bottom > 0 ? insets.bottom : vs(12));
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Image carousel — full width, taller aspect ratio */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: FOOTER_H + vs(8) }}
+      >
+        {/* ── Image carousel ── */}
         <View style={styles.carouselWrapper}>
           <ImageCarousel
             images={product.images}
             activeIndex={activeIndex}
             onIndexChange={setActiveIndex}
           />
-          {/* Back button overlay */}
+          {/* Back */}
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.overlayBtn, { top: insets.top + scale(10), left: scale(16) }]}
             onPress={() => navigation.goBack()}
-            accessibilityRole="button"
             accessibilityLabel="Go back"
           >
             <Text style={styles.backIcon}>‹</Text>
           </TouchableOpacity>
-          {/* Wishlist heart overlay */}
+          {/* Wishlist */}
           <TouchableOpacity
-            style={styles.wishlistOverlay}
+            style={[
+              styles.overlayBtn,
+              styles.wishlistBtn,
+              { top: insets.top + scale(10), right: scale(16) },
+            ]}
             onPress={() => toggleWishlist(product.id)}
-            accessibilityRole="button"
             accessibilityLabel={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Text style={[styles.heartIcon, isWishlisted && styles.heartActive]}>
@@ -119,296 +133,303 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
 
+        {/* ── Details ── */}
         <View style={styles.details}>
+
           {/* Name + Price */}
           <View style={styles.nameRow}>
             <Text style={styles.productName}>{product.name}</Text>
             <Text style={styles.productPrice}>{formatPrice(product.price)}</Text>
           </View>
 
-          {/* Star rating */}
+          {/* Stars */}
           <StarRating rating={product.rating} count={product.reviewCount} />
 
-          {/* Size */}
-          {product.sizeOptions.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Size</Text>
-              <View style={styles.sizeRow}>
-                {product.sizeOptions.map((size) => (
-                  <SizeOption
-                    key={size}
-                    size={size}
-                    selected={selectedSize === size}
-                    onPress={() => {
-                      setSelectedSize(size);
-                      setShowSizePrompt(false);
-                    }}
-                  />
-                ))}
+          {/* Color + Size row */}
+          <View style={styles.colorSizeRow}>
+            {/* Colors */}
+            {product.colorOptions?.length > 0 && (
+              <View style={styles.colorGroup}>
+                <Text style={styles.groupLabel}>Color</Text>
+                <View style={styles.swatchRow}>
+                  {product.colorOptions.map((c) => (
+                    <ColorSwatch
+                      key={c.hex}
+                      color={c.hex}
+                      selected={selectedColor === c.hex}
+                      onPress={() => setSelectedColor(c.hex)}
+                    />
+                  ))}
+                </View>
               </View>
-              {showSizePrompt && (
-                <Text style={styles.sizePrompt}>Please select a size</Text>
-              )}
-            </View>
-          )}
+            )}
 
-          {/* Description */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Description</Text>
-            <Text style={styles.descriptionText}>{displayedDesc}</Text>
-            {isLongDesc && (
-              <TouchableOpacity onPress={() => setDescExpanded((v) => !v)}>
-                <Text style={styles.readMore}>
-                  {descExpanded ? 'Show less' : 'Read more'}
-                </Text>
-              </TouchableOpacity>
+            {/* Sizes */}
+            {product.sizeOptions?.length > 0 && (
+              <View style={styles.sizeGroup}>
+                <Text style={styles.groupLabel}>Size</Text>
+                <View style={styles.sizeRow}>
+                  {product.sizeOptions.map((size) => (
+                    <TouchableOpacity
+                      key={size}
+                      style={[styles.sizePill, selectedSize === size && styles.sizePillActive]}
+                      onPress={() => { setSelectedSize(size); setShowSizePrompt(false); }}
+                      accessibilityLabel={`Size ${size}`}
+                    >
+                      <Text style={[styles.sizePillText, selectedSize === size && styles.sizePillTextActive]}>
+                        {size}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {showSizePrompt && (
+                  <Text style={styles.sizePrompt}>Please select a size</Text>
+                )}
+              </View>
             )}
           </View>
 
-          {/* Reviews summary */}
-          <View style={styles.reviewsHeader}>
-            <Text style={styles.sectionLabel}>Reviews</Text>
-            <Text style={styles.chevron}>›</Text>
-          </View>
-          <View style={styles.reviewsSummary}>
-            <Text style={styles.ratingBig}>{product.rating.toFixed(1)}</Text>
-            <View>
-              <Text style={styles.outOf}>OUT OF 5</Text>
-              <StarRating rating={product.rating} count={product.reviewCount} />
-              <Text style={styles.ratingsCount}>{product.reviewCount} ratings</Text>
-            </View>
+          {/* ── Description ── */}
+          <View style={styles.sectionBox}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => setDescExpanded((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.sectionLabel}>Description</Text>
+              <Text style={styles.chevron}>{descExpanded ? '⌃' : '⌄'}</Text>
+            </TouchableOpacity>
+            {descExpanded && (
+              <View style={styles.sectionBody}>
+                <Text style={styles.descText}>{displayedDesc}</Text>
+                {isLongDesc && (
+                  <TouchableOpacity onPress={() => setDescExpanded((v) => !v)}>
+                    <Text style={styles.readMore}>Read more</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
 
-          {/* Similar Products */}
-          {similarProducts.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.reviewsHeader}>
-                <Text style={styles.sectionLabel}>Similar Product</Text>
-                <Text style={styles.chevron}>›</Text>
+          {/* ── Reviews ── */}
+          <View style={styles.sectionBox}>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => setReviewsExpanded((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.sectionLabel}>Reviews</Text>
+              <Text style={styles.chevron}>{reviewsExpanded ? '⌃' : '⌄'}</Text>
+            </TouchableOpacity>
+            {reviewsExpanded && (
+              <View style={[styles.sectionBody, styles.reviewsBody]}>
+                <View style={styles.ratingBlock}>
+                  <Text style={styles.ratingBig}>{product.rating.toFixed(1)}</Text>
+                  <Text style={styles.outOf}>OUT OF 5</Text>
+                </View>
+                <View style={styles.ratingRight}>
+                  <StarRating rating={product.rating} count={product.reviewCount} size={18} />
+                  <Text style={styles.ratingsCount}>{product.reviewCount} ratings</Text>
+                </View>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.similarScroll}
+            )}
+          </View>
+
+          {/* ── Similar Products ── */}
+          {similarProducts.length > 0 && (
+            <View style={styles.sectionBox}>
+              <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => setSimilarExpanded((v) => !v)}
+                activeOpacity={0.7}
               >
-                {similarProducts.map((similar) => (
-                  <View key={similar.id} style={styles.similarCard}>
-                    <ProductCard
-                      product={similar}
-                      wishlisted={wishlistState.productIds.has(similar.id)}
-                      onPress={() => navigation.push('ProductDetail', { productId: similar.id })}
-                      onWishlistToggle={() => toggleWishlist(similar.id)}
-                    />
-                  </View>
-                ))}
-              </ScrollView>
+                <Text style={styles.sectionLabel}>Similar Product</Text>
+                <Text style={styles.chevron}>{similarExpanded ? '⌃' : '⌄'}</Text>
+              </TouchableOpacity>
+              {similarExpanded && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.similarScroll}
+                >
+                  {similarProducts.map((similar) => (
+                    <View key={similar.id} style={styles.similarCard}>
+                      <ProductCard
+                        product={similar}
+                        wishlisted={wishlistState.productIds.has(similar.id)}
+                        onPress={() => navigation.push('ProductDetail', { productId: similar.id })}
+                        onWishlistToggle={() => toggleWishlist(similar.id)}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
             </View>
           )}
         </View>
       </ScrollView>
 
-      {/* Add to Cart sticky footer */}
-      <View style={styles.footer}>
-        <PrimaryButton label="ADD TO CART" onPress={handleAddToCart} />
+      {/* ── ADD TO CART footer ── */}
+      <View style={[styles.footer, {
+        paddingBottom: (insets.bottom > 0 ? insets.bottom : vs(12)) + vs(72),
+      }]}>
+        <TouchableOpacity
+          style={styles.addToCartBtn}
+          onPress={handleAddToCart}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          <Text style={styles.addToCartText}>ADD TO CART</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.white,
-  },
-  notFoundText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.gray600,
-  },
+  container:   { flex: 1, backgroundColor: Colors.white },
+  notFound:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  notFoundText:{ fontSize: ms(15), color: Colors.gray600 },
+
+  /* Carousel */
   carouselWrapper: {
     width: SCREEN_WIDTH,
-    aspectRatio: 0.85,
     position: 'relative',
   },
-  backButton: {
+  overlayBtn: {
     position: 'absolute',
-    top: Spacing.md,
-    left: Spacing.md,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.black,
+    elevation: 4,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 3,
-    elevation: 3,
   },
-  backIcon: {
-    fontSize: 24,
-    color: Colors.black,
-    lineHeight: 28,
-    marginTop: -2,
-  },
-  wishlistOverlay: {
-    position: 'absolute',
-    top: Spacing.md,
-    right: Spacing.md,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  heartIcon: {
-    fontSize: 18,
-    color: Colors.gray600,
-  },
-  heartActive: {
-    color: '#E53935',
-  },
+  wishlistBtn: { backgroundColor: '#FFFFFF' },
+  backIcon:    { fontSize: ms(26), color: Colors.black, lineHeight: ms(30), marginTop: -2 },
+  heartIcon:   { fontSize: ms(18), color:'#D8D8D8'},
+  heartActive: { color: '#FF6E6E' },
+
+  /* Details */
   details: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
+    paddingHorizontal: scale(16),
+    paddingTop: vs(14),
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: scale(24),
+    borderTopRightRadius: scale(24),
+    marginTop: -scale(24),   // overlap up over the image bottom
   },
+
   nameRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.xs,
+    marginBottom: vs(6),
   },
   productName: {
     flex: 1,
-    fontSize: Typography.fontSize.lg,
+    fontSize: ms(20),
     fontWeight: '700',
     color: Colors.black,
-    marginRight: Spacing.sm,
+    marginRight: scale(8),
   },
-  productPrice: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: '700',
-    color: Colors.black,
-  },
-  ratingRow: {
+  productPrice: { fontSize: ms(20), fontWeight: '700', color: Colors.black },
+
+  /* Stars */
+  ratingRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: vs(14) },
+  star:        {},
+  starFilled:  { color: '#2E7D32' },
+  starEmpty:   { color: Colors.gray200 },
+  reviewCount: { fontSize: ms(13), color: Colors.gray600, marginLeft: scale(4) },
+
+  /* Color + Size */
+  colorSizeRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: vs(16),
+  },
+  colorGroup:  { flex: 1 },
+  sizeGroup:   { flex: 1, alignItems: 'flex-end' },
+  groupLabel:  { fontSize: ms(14), fontWeight: '600', color: Colors.black, marginBottom: vs(8) },
+  swatchRow:   { flexDirection: 'row', alignItems: 'center' },
+  sizeRow:     { flexDirection: 'row', alignItems: 'center', gap: scale(8) },
+  sizePill: {
+    width: scale(36),
+    height: scale(36),
+    borderRadius: scale(18),
+    borderWidth: 1,
+    borderColor: Colors.gray200,
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
   },
-  star: {
-    fontSize: 16,
+  sizePillActive: { backgroundColor: Colors.black, borderColor: Colors.black },
+  sizePillText:   { fontSize: ms(13), fontWeight: '600', color: Colors.gray600 },
+  sizePillTextActive: { color: Colors.white },
+  sizePrompt:  { fontSize: ms(12), color: Colors.error, marginTop: vs(4) },
+
+  /* Sections */
+  sectionBox: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.gray200,
+    paddingTop: vs(14),
+    marginBottom: vs(4),
   },
-  starFilled: {
-    color: '#F5A623',
-  },
-  starEmpty: {
-    color: Colors.gray200,
-  },
-  ratingValue: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: '600',
-    color: Colors.gray800,
-    marginLeft: 4,
-  },
-  reviewCount: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.gray400,
-    marginLeft: 2,
-  },
-  section: {
-    marginBottom: Spacing.md,
-  },
-  sectionLabel: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: '600',
-    color: Colors.black,
-    marginBottom: Spacing.sm,
-  },
-  sizeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  sizePrompt: {
-    marginTop: Spacing.xs,
-    fontSize: Typography.fontSize.sm,
-    color: Colors.error,
-  },
-  descriptionText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.gray600,
-    lineHeight: 20,
-  },
-  readMore: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.black,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  reviewsHeader: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    paddingBottom: vs(10),
   },
-  chevron: {
-    fontSize: 20,
-    color: Colors.gray400,
-  },
-  reviewsSummary: {
+  sectionLabel: { fontSize: ms(16), fontWeight: '700', color: Colors.black },
+  chevron:      { fontSize: ms(16), fontWeight: '700', color: Colors.black },
+  sectionBody:  { paddingBottom: vs(14) },
+
+  /* Description */
+  descText: { fontSize: ms(13), color: Colors.gray600, lineHeight: ms(22) },
+  readMore: { fontSize: ms(13), color: '#2E7D32', fontWeight: '600', marginTop: vs(4) },
+
+  /* Reviews */
+  reviewsBody: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
-    paddingBottom: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.gray200,
+    gap: scale(24),
   },
-  ratingBig: {
-    fontSize: 40,
-    fontWeight: '700',
-    color: Colors.black,
-  },
-  outOf: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.gray400,
-    marginBottom: 2,
-  },
-  ratingsCount: {
-    fontSize: Typography.fontSize.xs,
-    color: Colors.gray400,
-    marginTop: 2,
-  },
-  similarScroll: {
-    paddingRight: Spacing.md,
-  },
-  similarCard: {
-    width: 150,
-    marginRight: Spacing.sm,
-  },
+  ratingBlock: { alignItems: 'flex-start' },
+  ratingBig:   { fontSize: ms(48), fontWeight: '700', color: Colors.black, lineHeight: ms(52) },
+  outOf:       { fontSize: ms(11), color: Colors.gray400, marginTop: vs(2) },
+  ratingRight: { flex: 1 },
+  ratingsCount:{ fontSize: ms(12), color: Colors.gray400, marginTop: vs(2) },
+
+  /* Similar */
+  similarScroll: { paddingVertical: vs(8), paddingRight: scale(16) },
+  similarCard:   { width: scale(160), marginRight: scale(12) },
+
+  /* Footer */
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: Colors.white,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: scale(16),
+    paddingTop: vs(10),
     borderTopWidth: 1,
     borderTopColor: Colors.gray200,
+  },
+  addToCartBtn: {
+    backgroundColor: '#1C1C1C',
+    borderRadius: scale(50),
+    paddingVertical: vs(16),
+    alignItems: 'center',
+    width: '100%',
+  },
+  addToCartText: {
+    color: Colors.white,
+    fontSize: ms(14),
+    fontWeight: '700',
+    letterSpacing: 1.5,
   },
 });

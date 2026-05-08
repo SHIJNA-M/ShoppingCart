@@ -17,7 +17,7 @@ export default function HomeStack() {
     <Stack.Navigator
       initialRouteName="Category"
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         headerBackTitle: '',
         headerTintColor: '#000000',
         headerStyle: {
@@ -30,7 +30,7 @@ export default function HomeStack() {
       <Stack.Screen
         name="Category"
         component={CategoryScreen}
-        options={{ title: 'Shop' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="ProductListing"

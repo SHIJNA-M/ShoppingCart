@@ -1,145 +1,131 @@
-/**
- * ProfileScreen — displays user info and provides a logout action.
- * Requirements: 3.7, 7.4
- */
 import React from 'react';
 import {
-  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import PrimaryButton from '../components/PrimaryButton';
-import { Colors, Spacing, Typography, BorderRadius } from '../theme/tokens';
+import { Colors } from '../theme/tokens';
+import { scale, vs, ms } from '../utils/scale';
 
 export default function ProfileScreen() {
   const { state, logout } = useAuth();
   const user = state.user;
+  const insets = useSafeAreaInsets();
+  const { width: W } = useWindowDimensions();
+
+  const TAB_H = vs(64); // floating tab bar height
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={[styles.title, { fontSize: ms(22) }]}>Profile</Text>
       </View>
 
-      <View style={styles.content}>
-        {/* Avatar placeholder */}
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: scale(16),
+          paddingTop: vs(24),
+          paddingBottom: TAB_H + (insets.bottom > 0 ? insets.bottom : vs(16)) + vs(16),
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Avatar */}
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarInitial}>
+          <View style={[styles.avatar, { width: scale(80), height: scale(80), borderRadius: scale(40) }]}>
+            <Text style={[styles.avatarInitial, { fontSize: ms(28) }]}>
               {user?.fullName?.charAt(0)?.toUpperCase() ?? '?'}
             </Text>
           </View>
+          <Text style={[styles.userName, { fontSize: ms(18), marginTop: vs(10) }]}>
+            {user?.fullName ?? ''}
+          </Text>
+          <Text style={[styles.userEmail, { fontSize: ms(13) }]}>
+            {user?.email ?? ''}
+          </Text>
         </View>
 
-        {/* User info card */}
-        <View style={styles.infoCard}>
+        {/* Info card */}
+        <View style={[styles.infoCard, { borderRadius: scale(12), marginBottom: vs(24) }]}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Full Name</Text>
-            <Text style={styles.infoValue}>{user?.fullName ?? '—'}</Text>
+            <Text style={[styles.infoLabel, { fontSize: ms(14) }]}>Full Name</Text>
+            <Text style={[styles.infoValue, { fontSize: ms(14) }]}>{user?.fullName ?? '—'}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Username</Text>
-            <Text style={styles.infoValue}>
+            <Text style={[styles.infoLabel, { fontSize: ms(14) }]}>Username</Text>
+            <Text style={[styles.infoValue, { fontSize: ms(14) }]}>
               {user?.username ? `@${user.username}` : '—'}
             </Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            <Text style={styles.infoValue} numberOfLines={1}>
+            <Text style={[styles.infoLabel, { fontSize: ms(14) }]}>Email</Text>
+            <Text style={[styles.infoValue, { fontSize: ms(14) }]} numberOfLines={1}>
               {user?.email ?? '—'}
             </Text>
           </View>
         </View>
 
-        {/* Logout button */}
-        <View style={styles.logoutContainer}>
-          <PrimaryButton
-            label="LOG OUT"
-            onPress={logout}
-          />
-        </View>
-      </View>
+        {/* Logout button — full width pill */}
+        <TouchableOpacity
+          style={[styles.logoutBtn, {
+            borderRadius: scale(50),
+            paddingVertical: vs(15),
+            marginHorizontal: W * 0.1,
+          }]}
+          onPress={logout}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.logoutText, { fontSize: ms(14) }]}>LOG OUT</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.white,
-  },
+  container:  { flex: 1, backgroundColor: Colors.white },
   header: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+    paddingHorizontal: scale(16),
+    paddingTop: vs(12),
+    paddingBottom: vs(12),
     borderBottomWidth: 1,
-    borderBottomColor: Colors.gray200,
+    borderBottomColor: '#E5E5E5',
   },
-  title: {
-    fontSize: Typography.fontSize.xl,
-    fontFamily: Typography.fontFamily.bold,
-    fontWeight: '700',
-    color: Colors.black,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.lg,
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
+  title:      { fontWeight: '700', color: Colors.black },
+  avatarContainer: { alignItems: 'center', marginBottom: vs(24) },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     backgroundColor: Colors.black,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitial: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: '700',
-    color: Colors.white,
-  },
+  avatarInitial: { fontWeight: '700', color: Colors.white },
+  userName:   { fontWeight: '700', color: Colors.black },
+  userEmail:  { color: '#666', marginTop: vs(4) },
   infoCard: {
-    backgroundColor: Colors.gray100,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.xl,
+    backgroundColor: '#F7F7F7',
+    paddingHorizontal: scale(16),
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: vs(14),
   },
-  infoLabel: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.gray600,
-    fontFamily: Typography.fontFamily.regular,
+  infoLabel:  { color: '#666' },
+  infoValue:  { color: Colors.black, fontWeight: '500', flexShrink: 1, marginLeft: scale(16), textAlign: 'right' },
+  divider:    { height: 1, backgroundColor: '#E5E5E5' },
+  logoutBtn: {
+    backgroundColor: '#1C1C1C',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  infoValue: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.black,
-    fontFamily: Typography.fontFamily.medium,
-    fontWeight: '500',
-    flexShrink: 1,
-    marginLeft: Spacing.md,
-    textAlign: 'right',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.gray200,
-  },
-  logoutContainer: {
-    marginTop: 'auto',
-    paddingBottom: Spacing.lg,
-  },
+  logoutText: { color: Colors.white, fontWeight: '700', letterSpacing: 1.5 },
 });

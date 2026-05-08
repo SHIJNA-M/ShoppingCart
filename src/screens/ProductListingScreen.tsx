@@ -338,8 +338,10 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: Colors.white,
-    borderTopLeftRadius: BorderRadius.lg,
-    borderTopRightRadius: BorderRadius.lg,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    borderBottomLeftRadius: BorderRadius.xl,
+    borderBottomRightRadius: BorderRadius.xl,
     padding: Spacing.lg,
     paddingBottom: Spacing.xl,
   },

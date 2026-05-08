@@ -45,6 +45,10 @@ export interface Category {
   id: string;
   name: string;
   imageUrl: string | number;  // string = URI, number = local require()
+  imgWidth?: number;
+  imgHeight?: number;
+  top?: number;
+  left?: number;
 }
 
 // ── Cart ──────────────────────────────────────────────────
@@ -99,7 +103,11 @@ export type HomeStackParamList = {
 export type MainTabParamList = {
   Home: NavigatorScreenParams<HomeStackParamList>;
   Categories: undefined;
-  Wishlist: undefined;
-  Cart: undefined;
+  Cart: NavigatorScreenParams<CartStackParamList>;
   Profile: undefined;
+};
+
+export type CartStackParamList = {
+  CartMain: undefined;
+  Checkout: { total: number };
 };

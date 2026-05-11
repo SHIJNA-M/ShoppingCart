@@ -65,6 +65,8 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.gray400,
     paddingVertical: vs(8),
     fontSize: ms(14),
+    fontWeight: '300',
+    lineHeight: 24,
     color: '#332218',
     backgroundColor: 'transparent',
   },

@@ -10,6 +10,7 @@ module.exports = {
       '|react-native-screens' +
       '|react-native-safe-area-context' +
       '|react-native-vector-icons' +
+      '|react-native-keychain' +
       ')/)',
   ],
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,13 +16,13 @@ import UnderlineInput from '../../components/UnderlineInput';
 import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../theme/tokens';
 import { ms } from '../../utils/scale';
-import { isEmptyOrWhitespace } from '../../utils/validation';
+import { isEmptyOrWhitespace, isValidEmail } from '../../utils/validation';
 import type { RootStackParamList } from '../../types/index';
 
 type Props = StackScreenProps<RootStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
-  const { state, login } = useAuth();
+  const { state, login, clearError } = useAuth();
   const { width: W, height: H } = useWindowDimensions();
 
   const [email, setEmail]           = useState('');
@@ -32,9 +33,15 @@ export default function LoginScreen({ navigation }: Props) {
   const handleLogin = async () => {
     const eEmpty = isEmptyOrWhitespace(email);
     const pEmpty = isEmptyOrWhitespace(password);
-    setEmailError(eEmpty ? 'Email is required.' : '');
+    const eInvalid = !isValidEmail(email);
+
+    setEmailError(
+      eEmpty   ? 'Email is required.' :
+      eInvalid ? 'Please enter a valid email address.' : ''
+    );
     setPassError(pEmpty ? 'Password is required.' : '');
-    if (eEmpty || pEmpty) return;
+
+    if (eEmpty || pEmpty || eInvalid) return;
     await login(email, password);
   };
 
@@ -58,14 +65,18 @@ export default function LoginScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Heading */}
-        <Text style={[styles.h1, { fontSize: ms(34) }]}>Log into</Text>
-        <Text style={[styles.h2, { fontSize: ms(34), marginBottom: headGap }]}>your account</Text>
+        <Text style={styles.h1}>Log into</Text>
+        <Text style={[styles.h2, { marginBottom: headGap }]}>your account</Text>
 
         {/* Inputs */}
         <UnderlineInput
           placeholder="Email address"
           value={email}
-          onChangeText={(t) => { setEmail(t); if (emailError) setEmailError(''); }}
+          onChangeText={(t) => {
+            setEmail(t);
+            if (emailError) setEmailError('');
+            if (state.error) clearError();
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
           errorMessage={emailError}
@@ -73,7 +84,11 @@ export default function LoginScreen({ navigation }: Props) {
         <UnderlineInput
           placeholder="Password"
           value={password}
-          onChangeText={(t) => { setPassword(t); if (passError) setPassError(''); }}
+          onChangeText={(t) => {
+            setPassword(t);
+            if (passError) setPassError('');
+            if (state.error) clearError();
+          }}
           secureTextEntry
           autoCapitalize="none"
           errorMessage={passError}
@@ -81,7 +96,7 @@ export default function LoginScreen({ navigation }: Props) {
 
         {/* Forgot password */}
         <TouchableOpacity style={[styles.forgotRow, { marginTop: forgotGap, marginBottom: forgotGap }]}>
-          <Text style={[styles.forgotText, { fontSize: ms(13) }]}>Forgot Password?</Text>
+          <Text style={styles.forgotText}>Forgot Password?</Text>
         </TouchableOpacity>
 
         {state.error ? (
@@ -104,12 +119,15 @@ export default function LoginScreen({ navigation }: Props) {
             disabled={state.isLoading}
             activeOpacity={0.85}
           >
-            <Text style={[styles.btnText, { fontSize: ms(14) }]}>LOG IN</Text>
+            {state.isLoading
+              ? <ActivityIndicator color={Colors.white} size="small" />
+              : <Text style={[styles.btnText, { fontSize: ms(14) }]}>LOG IN</Text>
+            }
           </TouchableOpacity>
         </View>
 
         {/* Or divider */}
-        <Text style={[styles.orText, { fontSize: ms(12), marginBottom: socialGap }]}>
+        <Text style={styles.orText}>
           or log in with
         </Text>
 
@@ -140,25 +158,41 @@ const styles = StyleSheet.create({
   flex:       { flex: 1, backgroundColor: Colors.white },
   container:  { flexGrow: 1, paddingBottom: 32 },
 
-  h1: { fontWeight: '700', color: Colors.black, lineHeight: undefined },
-  h2: { fontWeight: '700', color: Colors.black },
+  // Heading: Product Sans Bold 24px, line-height 48
+  h1: { fontWeight: '700', fontSize: 24, lineHeight: 48, color: Colors.black },
+  h2: { fontWeight: '700', fontSize: 24, lineHeight: 48, color: Colors.black },
 
   forgotRow:  { alignSelf: 'flex-end' },
-  forgotText: { color: '#666' },
+  // Product Sans Light 300, 14px
+  forgotText: { color: '#666', fontSize: 14, fontWeight: '300', lineHeight: 24 },
 
-  error:      { color: '#D32F2F', textAlign: 'center' },
+  error:      { color: '#D32F2F', textAlign: 'center', fontSize: ms(12) },
 
   btnRow:     { alignItems: 'center' },
   btn:        { backgroundColor: '#1C1C1C' },
   btnDisabled:{ opacity: 0.5 },
-  btnText:    { color: Colors.white, fontWeight: '700', letterSpacing: 1.5 },
+  btnText:    { color: Colors.white, fontWeight: '700', letterSpacing: 1.5, fontSize: ms(14) },
 
-  orText:     { textAlign: 'center', color: '#AAAAAA' },
+  // "or log in with": Product Sans Light 400, 12px, line-height 24, letter-spacing 2%
+  orText: {
+    textAlign: 'center',
+    color: '#AAAAAA',
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 24,
+    letterSpacing: 0.24,   // 2% of 12px
+    width: 250,
+    height: 40,
+    alignSelf: 'center',
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
   socialRow:  { flexDirection: 'row', justifyContent: 'center' },
 
   spacer:     { flex: 1, minHeight: 24 },
 
   bottomRow:  { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingBottom: 8 },
-  bottomText: { color: Colors.black },
-  bottomLink: { color: Colors.black, textDecorationLine: 'underline', fontWeight: '600' },
+  // Product Sans Light 13px
+  bottomText: { color: Colors.black, fontSize: 13, fontWeight: '300' },
+  bottomLink: { color: Colors.black, textDecorationLine: 'underline', fontWeight: '600', fontSize: 13 },
 });

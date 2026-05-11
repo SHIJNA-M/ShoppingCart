@@ -8,17 +8,18 @@ export const mockCategories: Category[] = [
     imgWidth: 149,
     imgHeight: 146,
     top: 0,
-     left: 183,
+    left: 183,
+    color: '#A3A798',
   },
   {
     id: 'cat-accessories',
     name: 'Accessories',
     imageUrl: require('../assets/images/categories/accessories1.png'),
-    imgWidth: 194,
+    imgWidth: 184,
     imgHeight: 129,
     top: -6,
-    left: 187
-
+    left: 187,
+    color: '#898280',
   },
   {
     id: 'cat-shoes',
@@ -28,6 +29,7 @@ export const mockCategories: Category[] = [
     imgHeight: 190,
     top: 0,
     left: 190,
+    color: '#44565C',
   },
   {
     id: 'cat-bags',
@@ -37,5 +39,6 @@ export const mockCategories: Category[] = [
     imgHeight: 125,
     top: 0,
     left: 211,
+    color: '#B9AEB2',
   },
 ];

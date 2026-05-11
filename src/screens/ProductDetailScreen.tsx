@@ -36,7 +36,7 @@ function StarRating({ rating, count, size = 16 }: { rating: number; count: numbe
     <View style={styles.ratingRow}>
       {[1, 2, 3, 4, 5].map((star) => (
         <Text key={star} style={[styles.star, { fontSize: ms(size) }, star <= Math.round(rating) ? styles.starFilled : styles.starEmpty]}>
-          ★
+          ★ 
         </Text>
       ))}
       <Text style={styles.reviewCount}>({count})</Text>
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   /* Stars */
   ratingRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: vs(14) },
   star:        {},
-  starFilled:  { color: '#2E7D32' },
+  starFilled:  { color: '#508A7B' },
   starEmpty:   { color: Colors.gray200 },
   reviewCount: { fontSize: ms(13), color: Colors.gray600, marginLeft: scale(4) },
 

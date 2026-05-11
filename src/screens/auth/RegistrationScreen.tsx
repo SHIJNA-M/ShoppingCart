@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,7 +22,7 @@ import type { RootStackParamList } from '../../types/index';
 type Props = StackScreenProps<RootStackParamList, 'Registration'>;
 
 export default function RegistrationScreen({ navigation }: Props) {
-  const { state, register } = useAuth();
+  const { state, register, clearError } = useAuth();
   const { width: W, height: H } = useWindowDimensions();
 
   const [fullName, setFullName]               = useState('');
@@ -39,18 +40,23 @@ export default function RegistrationScreen({ navigation }: Props) {
     const eE = isEmptyOrWhitespace(email);
     const pE = isEmptyOrWhitespace(password);
     const cE = isEmptyOrWhitespace(confirmPassword);
+    const pShort = !pE && password.length < 8;
 
     setNameErr(nE ? 'Name is required.' : '');
     setEmailErr(eE ? 'Email is required.' : '');
-    setPassErr(pE ? 'Password is required.' : '');
+    setPassErr(
+      pE ? 'Password is required.'
+        : pShort ? 'Password must be at least 8 characters.'
+        : '',
+    );
     setConfirmErr(
       cE ? 'Please confirm your password.'
         : !doPasswordsMatch(password, confirmPassword) ? 'Passwords do not match.'
         : '',
     );
 
-    if (nE || eE || pE || cE || !doPasswordsMatch(password, confirmPassword)) return;
-    await register(fullName, email, email, password);
+    if (nE || eE || pE || pShort || cE || !doPasswordsMatch(password, confirmPassword)) return;
+    await register(fullName, email, password);
   };
 
   const topPad   = H * 0.07;
@@ -70,21 +76,21 @@ export default function RegistrationScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         {/* Heading */}
-        <Text style={[styles.h1, { fontSize: ms(34) }]}>Create</Text>
-        <Text style={[styles.h2, { fontSize: ms(34), marginBottom: headGap }]}>your account</Text>
+        <Text style={styles.h1}>Create</Text>
+        <Text style={[styles.h2, { marginBottom: headGap }]}>your account</Text>
 
         {/* Inputs */}
         <UnderlineInput
           placeholder="Enter your name"
           value={fullName}
-          onChangeText={(t) => { setFullName(t); if (nameErr) setNameErr(''); }}
+          onChangeText={(t) => { setFullName(t); if (nameErr) setNameErr(''); if (state.error) clearError(); }}
           autoCapitalize="words"
           errorMessage={nameErr}
         />
         <UnderlineInput
           placeholder="Email address"
           value={email}
-          onChangeText={(t) => { setEmail(t); if (emailErr) setEmailErr(''); }}
+          onChangeText={(t) => { setEmail(t); if (emailErr) setEmailErr(''); if (state.error) clearError(); }}
           keyboardType="email-address"
           autoCapitalize="none"
           errorMessage={emailErr}
@@ -95,6 +101,7 @@ export default function RegistrationScreen({ navigation }: Props) {
           onChangeText={(t) => {
             setPassword(t);
             if (passErr) setPassErr('');
+            if (state.error) clearError();
             if (confirmPassword) setConfirmErr(doPasswordsMatch(t, confirmPassword) ? '' : 'Passwords do not match.');
           }}
           secureTextEntry
@@ -107,6 +114,7 @@ export default function RegistrationScreen({ navigation }: Props) {
           onChangeText={(t) => {
             setConfirmPassword(t);
             setConfirmErr(t ? (doPasswordsMatch(password, t) ? '' : 'Passwords do not match.') : '');
+            if (state.error) clearError();
           }}
           secureTextEntry
           autoCapitalize="none"
@@ -133,12 +141,14 @@ export default function RegistrationScreen({ navigation }: Props) {
             disabled={state.isLoading}
             activeOpacity={0.85}
           >
-            <Text style={[styles.btnText, { fontSize: ms(14) }]}>SIGN UP</Text>
+            {state.isLoading
+              ? <ActivityIndicator color={Colors.white} />
+              : <Text style={[styles.btnText, { fontSize: ms(14) }]}>SIGN UP</Text>}
           </TouchableOpacity>
         </View>
 
         {/* Or divider */}
-        <Text style={[styles.orText, { fontSize: ms(12), marginBottom: socialGap }]}>
+        <Text style={styles.orText}>
           or sign up with
         </Text>
 
@@ -154,9 +164,9 @@ export default function RegistrationScreen({ navigation }: Props) {
 
         {/* Bottom nav */}
         <View style={styles.bottomRow}>
-          <Text style={[styles.bottomText, { fontSize: ms(13) }]}>Already have account? </Text>
+          <Text style={styles.bottomText}>Already have account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={[styles.bottomLink, { fontSize: ms(13) }]}>Log In</Text>
+            <Text style={styles.bottomLink}>Log In</Text>
           </TouchableOpacity>
         </View>
 
@@ -169,22 +179,36 @@ const styles = StyleSheet.create({
   flex:       { flex: 1, backgroundColor: Colors.white },
   container:  { flexGrow: 1, paddingBottom: 32 },
 
-  h1: { fontWeight: '700', color: Colors.black },
-  h2: { fontWeight: '700', color: Colors.black },
+  // Heading: Product Sans Bold 24px, line-height 48
+  h1: { fontWeight: '700', fontSize: 24, lineHeight: 48, color: Colors.black },
+  h2: { fontWeight: '700', fontSize: 24, lineHeight: 48, color: Colors.black },
 
-  error:      { color: '#D32F2F', textAlign: 'center' },
+  error:      { color: '#D32F2F', textAlign: 'center', fontSize: ms(12) },
 
   btnRow:     { alignItems: 'center' },
   btn:        { backgroundColor: '#1C1C1C' },
   btnDisabled:{ opacity: 0.5 },
-  btnText:    { color: Colors.white, fontWeight: '700', letterSpacing: 1.5 },
+  btnText:    { color: Colors.white, fontWeight: '700', letterSpacing: 1.5, fontSize: ms(14) },
 
-  orText:     { textAlign: 'center', color: '#AAAAAA' },
+  // "or sign up with": Product Sans Light 400, 12px, line-height 24, letter-spacing 2%
+  orText: {
+    textAlign: 'center',
+    color: '#AAAAAA',
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 24,
+    letterSpacing: 0.24,   // 2% of 12px
+    width: 235,
+    height: 40,
+    alignSelf: 'center',
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
   socialRow:  { flexDirection: 'row', justifyContent: 'center' },
 
   spacer:     { flex: 1, minHeight: 20 },
 
   bottomRow:  { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingBottom: 8 },
-  bottomText: { color: Colors.black },
-  bottomLink: { color: Colors.black, textDecorationLine: 'underline', fontWeight: '600' },
+  bottomText: { color: Colors.black, fontSize: 13, fontWeight: '300' },
+  bottomLink: { color: Colors.black, textDecorationLine: 'underline', fontWeight: '600', fontSize: 13 },
 });

@@ -5,15 +5,16 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 export interface User {
   id: string;
   fullName: string;
-  username: string;
   email: string;
   avatarUrl?: string;
+  token?: string;
 }
 
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isBootstrapping: boolean;
   error: string | null;
 }
 
@@ -44,11 +45,12 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
-  imageUrl: string | number;  // string = URI, number = local require()
+  imageUrl: string | number;
   imgWidth?: number;
   imgHeight?: number;
   top?: number;
   left?: number;
+  color?: string;
 }
 
 // ── Cart ──────────────────────────────────────────────────

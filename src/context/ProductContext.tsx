@@ -1,6 +1,7 @@
 import React, {
   createContext,
   useContext,
+  useEffect,
   useReducer,
   useMemo,
   type ReactNode,
@@ -8,6 +9,7 @@ import React, {
 import type { Product, Category, FilterState, SortOption } from '../types';
 import { mockCategories } from '../data/mockCategories';
 import { mockProducts } from '../data/mockProducts';
+import { ProductService } from '../services/productService';
 
 // ── State shape ───────────────────────────────────────────
 
@@ -15,6 +17,8 @@ interface ProductState {
   products: Product[];
   categories: Category[];
   filters: FilterState;
+  isLoading: boolean;
+  error: string | null;
 }
 
 // ── Action types ──────────────────────────────────────────
@@ -22,7 +26,10 @@ interface ProductState {
 type ProductAction =
   | { type: 'SET_FILTER'; payload: Partial<FilterState> }
   | { type: 'SET_SORT'; payload: SortOption }
-  | { type: 'LOAD_PRODUCTS'; payload: Product[] };
+  | { type: 'LOAD_PRODUCTS'; payload: Product[] }
+  | { type: 'LOAD_CATEGORIES'; payload: Category[] }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null };
 
 // ── Initial state ─────────────────────────────────────────
 
@@ -33,6 +40,8 @@ const initialState: ProductState = {
     categoryId: null,
     sortBy: 'newest',
   },
+  isLoading: false,
+  error: null,
 };
 
 // ── Reducer ───────────────────────────────────────────────
@@ -56,6 +65,18 @@ function productReducer(state: ProductState, action: ProductAction): ProductStat
         ...state,
         products: action.payload,
       };
+
+    case 'LOAD_CATEGORIES':
+      return {
+        ...state,
+        categories: action.payload,
+      };
+
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+
+    case 'SET_ERROR':
+      return { ...state, error: action.payload, isLoading: false };
 
     default:
       return state;
@@ -82,6 +103,43 @@ interface ProductProviderProps {
 
 export function ProductProvider({ children }: ProductProviderProps) {
   const [state, dispatch] = useReducer(productReducer, initialState);
+
+  // ── Fetch categories and products from API on mount ───────
+  // AbortController is created here and its signal passed to the service.
+  // When the component unmounts, the cleanup function calls controller.abort(),
+  // which cancels any in-flight fetch — preventing setState on unmounted component.
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchData = async () => {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'SET_ERROR', payload: null });
+      try {
+        const [categories, products] = await Promise.all([
+          ProductService.getCategories(controller.signal),
+          ProductService.getProducts(controller.signal),
+        ]);
+        dispatch({ type: 'LOAD_CATEGORIES', payload: categories });
+        dispatch({ type: 'LOAD_PRODUCTS', payload: products });
+      } catch (error) {
+        // Ignore abort errors — they're intentional on unmount
+        if (error instanceof Error && error.message.includes('cancelled')) return;
+        // Ignore the mock-data fallback flag — not a real error
+        if (error instanceof Error && error.message.includes('API disabled')) return;
+        const message = error instanceof Error ? error.message : 'Failed to load data';
+        console.warn('[ProductContext] API fetch failed, using mock data:', message);
+        dispatch({ type: 'SET_ERROR', payload: message });
+        // Keep mock data as fallback — already loaded in initialState
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false });
+      }
+    };
+
+    fetchData();
+
+    // Cleanup: abort the fetch if the provider unmounts
+    return () => controller.abort();
+  }, []);
 
   const setFilter = (filter: Partial<FilterState>): void => {
     dispatch({ type: 'SET_FILTER', payload: filter });

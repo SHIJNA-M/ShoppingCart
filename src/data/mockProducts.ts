@@ -86,6 +86,23 @@ export const mockProducts: Product[] = [
     categoryId: 'cat-clothing',
     similarProductIds: ['prod-1', 'prod-2'],
   },
+  {
+    id: 'prod-1',
+    name: 'Classic Cotton T-Shirt',
+    price: 2999,
+    images: [images['prod1-1'], images['prod1-2'], images['prod1-3']],
+    colorOptions: [
+      { label: 'White', hex: '#FFFFFF', imageIndex: 0 },
+      { label: 'Black', hex: '#000000', imageIndex: 1 },
+      { label: 'Navy', hex: '#001F3F', imageIndex: 2 },
+    ],
+    sizeOptions: ['XS', 'S', 'M', 'L', 'XL'],
+    description: 'A timeless wardrobe essential crafted from premium cotton for all-day comfort.',
+    rating: 4.5,
+    reviewCount: 128,
+    categoryId: 'cat-clothing',
+    similarProductIds: ['prod-2', 'prod-3'],
+  },
   // ── Accessories ──────────────────────────────────────────
   {
     id: 'prod-4',
@@ -135,6 +152,22 @@ export const mockProducts: Product[] = [
     reviewCount: 156,
     categoryId: 'cat-accessories',
     similarProductIds: ['prod-4', 'prod-5'],
+  },
+   {
+    id: 'prod-4',
+    name: 'Leather Belt',
+    price: 3499,
+    images: [images['prod4-1'], images['prod4-2']],
+    colorOptions: [
+      { label: 'Brown', hex: '#8B4513', imageIndex: 0 },
+      { label: 'Black', hex: '#000000', imageIndex: 1 },
+    ],
+    sizeOptions: ['S', 'M', 'L', 'XL'],
+    description: 'Genuine leather belt with classic buckle design.',
+    rating: 4.3,
+    reviewCount: 45,
+    categoryId: 'cat-accessories',
+    similarProductIds: ['prod-5', 'prod-6'],
   },
   // ── Shoes ────────────────────────────────────────────────
   {
@@ -187,6 +220,23 @@ export const mockProducts: Product[] = [
     categoryId: 'cat-shoes',
     similarProductIds: ['prod-7', 'prod-8'],
   },
+  {
+    id: 'prod-7',
+    name: 'Running Sneakers',
+    price: 9999,
+    images: [images['prod7-1'], images['prod7-2'], images['prod7-3']],
+    colorOptions: [
+      { label: 'White/Blue', hex: '#4169E1', imageIndex: 0 },
+      { label: 'Black/Red', hex: '#DC143C', imageIndex: 1 },
+      { label: 'Grey', hex: '#808080', imageIndex: 2 },
+    ],
+    sizeOptions: ['7', '8', '9', '10'],
+    description: 'Lightweight running shoes with responsive cushioning.',
+    rating: 4.7,
+    reviewCount: 203,
+    categoryId: 'cat-shoes',
+    similarProductIds: ['prod-8', 'prod-9'],
+  },
   // ── Bags ─────────────────────────────────────────────────
   {
     id: 'prod-10',
@@ -236,5 +286,21 @@ export const mockProducts: Product[] = [
     reviewCount: 98,
     categoryId: 'cat-bags',
     similarProductIds: ['prod-10', 'prod-11'],
+  },
+  {
+    id: 'prod-10',
+    name: 'Leather Tote Bag',
+    price: 14999,
+    images: [images['prod10-1'], images['prod10-2']],
+    colorOptions: [
+      { label: 'Tan', hex: '#D2B48C', imageIndex: 0 },
+      { label: 'Black', hex: '#000000', imageIndex: 1 },
+    ],
+    sizeOptions: ['S'],
+    description: 'Spacious leather tote bag perfect for work or travel.',
+    rating: 4.8,
+    reviewCount: 112,
+    categoryId: 'cat-bags',
+    similarProductIds: ['prod-11', 'prod-12'],
   },
 ];

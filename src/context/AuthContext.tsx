@@ -183,7 +183,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     dispatch({ type: 'SET_LOADING', payload: true });
 
     try {
-      const { user, token } = await AuthService.register(fullName, email, password);
+      // Register the account
+      await AuthService.register(fullName, email, password);
+      // Register API returns no token — immediately login to get one
+      const { user, token } = await AuthService.login(email, password);
       await TokenStore.setToken(token);
       dispatch({ type: 'REGISTER', payload: { ...user, token } });
     } catch (error) {

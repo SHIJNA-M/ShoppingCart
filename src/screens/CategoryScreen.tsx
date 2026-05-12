@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Image,
   StyleSheet,
@@ -260,9 +261,21 @@ export default function CategoryScreen({ navigation }: Props) {
         }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.gray600 }}>
-            No categories found.
-          </Text>
+          state.isLoading ? (
+            <ActivityIndicator
+              size="large"
+              color={Colors.black}
+              style={{ marginTop: 60 }}
+            />
+          ) : state.error ? (
+            <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.error }}>
+              {state.error}
+            </Text>
+          ) : (
+            <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.gray600 }}>
+              No categories found.
+            </Text>
+          )
         }
       />
     </SafeAreaView>

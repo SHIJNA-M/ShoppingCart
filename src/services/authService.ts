@@ -46,6 +46,9 @@ async function request<T>(
 
     const json: AuthResponse = await response.json();
 
+    console.log('[AuthService] response status:', response.status);
+    console.log('[AuthService] response body:', JSON.stringify(json));
+
     if (json.success === false) {
       // API returns either message string or errors object
       const msg = json.message
@@ -56,6 +59,7 @@ async function request<T>(
 
     return json as unknown as T;
   } catch (error) {
+    console.log('[AuthService] caught error:', error);
     if (error instanceof Error) {
       // Timeout: AbortController fires a DOMException with name 'AbortError'
       if (error.name === 'AbortError') {

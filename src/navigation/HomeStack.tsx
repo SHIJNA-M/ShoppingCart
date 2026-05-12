@@ -35,7 +35,7 @@ export default function HomeStack() {
       <Stack.Screen
         name="ProductListing"
         component={ProductListingScreen}
-        options={({ route }) => ({ title: route.params.categoryName })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="ProductDetail"

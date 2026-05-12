@@ -1,8 +1,9 @@
 /**
  * ProductDetailScreen — matches Figma design
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   ScrollView,
   StyleSheet,
@@ -13,13 +14,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { StackScreenProps } from '@react-navigation/stack';
-import type { HomeStackParamList } from '../types';
+import type { HomeStackParamList, Product } from '../types';
 import ImageCarousel from '@components/ImageCarousel';
 import ColorSwatch from '@components/ColorSwatch';
 import ProductCard from '@components/ProductCard';
 import { useProducts } from '@context/ProductContext';
 import { useCart } from '@context/CartContext';
 import { useWishlist } from '@context/WishlistContext';
+import { ProductService } from '../services/productService';
 import { Colors } from '@theme/tokens';
 import { scale, vs, ms } from '../utils/scale';
 
@@ -52,7 +54,46 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { width: SCREEN_WIDTH } = useWindowDimensions();
 
-  const product = productState.products.find((p) => p.id === productId);
+  // Fetch the product from the API.
+  // AbortController signal is passed to the service so the request is
+  // cancelled automatically when the screen unmounts — no memory leaks.
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchProduct = async () => {
+      setIsLoading(true);
+      setFetchError(null);
+      try {
+        const data = await ProductService.getProductById(productId, controller.signal);
+        setProduct(data);
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('cancelled')) return;
+        if (err instanceof Error && err.message.includes('API disabled')) {
+          // Fall back to local context cache
+          const cached = productState.products.find((p) => p.id === productId);
+          if (cached) setProduct(cached);
+          return;
+        }
+        // Fallback: try to find in local context cache
+        const cached = productState.products.find((p) => p.id === productId);
+        if (cached) {
+          setProduct(cached);
+        } else {
+          setFetchError(err instanceof Error ? err.message : 'Failed to load product');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProduct();
+
+    return () => controller.abort();
+  }, [productId]);
 
   const [activeIndex, setActiveIndex]       = useState(0);
   const [selectedSize, setSelectedSize]     = useState<string | null>(null);
@@ -64,10 +105,18 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const [reviewsExpanded, setReviewsExpanded] = useState(true);
   const [similarExpanded, setSimilarExpanded] = useState(true);
 
-  if (!product) {
+  if (isLoading) {
     return (
       <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Product not found.</Text>
+        <ActivityIndicator size="large" color={Colors.black} />
+      </View>
+    );
+  }
+
+  if (fetchError || !product) {
+    return (
+      <View style={styles.notFound}>
+        <Text style={styles.notFoundText}>{fetchError ?? 'Product not found.'}</Text>
       </View>
     );
   }
@@ -128,7 +177,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
             accessibilityLabel={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Text style={[styles.heartIcon, isWishlisted && styles.heartActive]}>
-              {isWishlisted ? '♥' : '♡'}
+              {isWishlisted ? '♥' : '♥'}
             </Text>
           </TouchableOpacity>
         </View>

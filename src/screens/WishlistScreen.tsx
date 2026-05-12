@@ -21,7 +21,7 @@ import { Colors, Spacing, Typography } from '../theme/tokens';
 import type { Product, HomeStackParamList, MainTabParamList } from '../types';
 
 type WishlistNavProp = CompositeNavigationProp<
-  BottomTabNavigationProp<MainTabParamList, 'Wishlist'>,
+  BottomTabNavigationProp<MainTabParamList >,
   StackNavigationProp<HomeStackParamList>
 >;
 

@@ -1,455 +1,193 @@
-/**
- * ProductListingScreen — Figma "Category Products" screen
- * "Found X Results" heading, Filter button, 2-col product grid.
- */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
-  Modal,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import type { StackScreenProps } from '@react-navigation/stack';
+import type { HomeStackParamList, Product } from '../types';
 import ProductCard from '../components/ProductCard';
+import { ProductService } from '../services/productService';
 import { useProducts } from '../context/ProductContext';
-import { useWishlist } from '../context/WishlistContext';
-import { BorderRadius, Colors, Spacing, Typography } from '../theme/tokens';
-import type { FilterState, HomeStackParamList, Product, SortOption } from '../types';
+import { Colors, Typography } from '../theme/tokens';
+import { ms, scale } from '../utils/scale';
 
 type Props = StackScreenProps<HomeStackParamList, 'ProductListing'>;
 
-const SORT_OPTIONS: { label: string; value: SortOption }[] = [
-  { label: 'Newest', value: 'newest' },
-  { label: 'Price: Low to High', value: 'price_asc' },
-  { label: 'Price: High to Low', value: 'price_desc' },
-  { label: 'Top Rated', value: 'rating_desc' },
-];
-
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-
 export default function ProductListingScreen({ route, navigation }: Props) {
-  const { categoryId } = route.params;
-  const { state, setFilter, setSort } = useProducts();
-  const { state: wishlistState, toggleWishlist } = useWishlist();
+  const { categoryId, categoryName } = route.params;
+  const { state } = useProducts();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set());
 
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [sortModalVisible, setSortModalVisible] = useState(false);
-  const [priceMinDraft, setPriceMinDraft] = useState('');
-  const [priceMaxDraft, setPriceMaxDraft] = useState('');
-  const [selectedSizesDraft, setSelectedSizesDraft] = useState<string[]>([]);
+  const GAP = ms(12);
+  const H_PAD = ms(16);
 
-  const displayedProducts = useMemo(() => {
-    let result = state.products.filter((p) => p.categoryId === categoryId);
-    if (state.filters.priceMin !== undefined) {
-      result = result.filter((p) => p.price >= state.filters.priceMin!);
-    }
-    if (state.filters.priceMax !== undefined) {
-      result = result.filter((p) => p.price <= state.filters.priceMax!);
-    }
-    if (state.filters.sizes && state.filters.sizes.length > 0) {
-      result = result.filter((p) =>
-        state.filters.sizes!.some((s) => p.sizeOptions.includes(s)),
-      );
-    }
-    switch (state.filters.sortBy) {
-      case 'price_asc':
-        result = [...result].sort((a, b) => a.price - b.price);
-        break;
-      case 'price_desc':
-        result = [...result].sort((a, b) => b.price - a.price);
-        break;
-      case 'rating_desc':
-        result = [...result].sort((a, b) => b.rating - a.rating);
-        break;
-      default:
-        break;
-    }
-    return result;
-  }, [state.products, state.filters, categoryId]);
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const hasActiveFilters =
-    state.filters.priceMin !== undefined ||
-    state.filters.priceMax !== undefined ||
-    (state.filters.sizes && state.filters.sizes.length > 0);
-
-  function openFilterModal() {
-    setPriceMinDraft(
-      state.filters.priceMin !== undefined ? String(state.filters.priceMin / 100) : '',
-    );
-    setPriceMaxDraft(
-      state.filters.priceMax !== undefined ? String(state.filters.priceMax / 100) : '',
-    );
-    setSelectedSizesDraft(state.filters.sizes ?? []);
-    setFilterModalVisible(true);
-  }
-
-  function applyFilters() {
-    const update: Partial<FilterState> = {
-      priceMin: priceMinDraft !== '' ? Math.round(parseFloat(priceMinDraft) * 100) : undefined,
-      priceMax: priceMaxDraft !== '' ? Math.round(parseFloat(priceMaxDraft) * 100) : undefined,
-      sizes: selectedSizesDraft.length > 0 ? selectedSizesDraft : undefined,
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const all = await ProductService.getProducts(controller.signal);
+        const filtered = all.filter((p) => p.categoryId === categoryId);
+        setProducts(filtered);
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('cancelled')) return;
+        // API not available — fall back to mock data from context
+        const filtered = state.products.filter((p) => p.categoryId === categoryId);
+        setProducts(filtered);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setFilter(update);
-    setFilterModalVisible(false);
-  }
 
-  function clearFilters() {
-    setPriceMinDraft('');
-    setPriceMaxDraft('');
-    setSelectedSizesDraft([]);
-    setFilter({ priceMin: undefined, priceMax: undefined, sizes: undefined });
-    setFilterModalVisible(false);
-  }
+    fetchProducts();
 
-  function toggleSizeDraft(size: string) {
-    setSelectedSizesDraft((prev) =>
-      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size],
-    );
-  }
+    return () => controller.abort();
+  }, [categoryId]);
 
-  function applySort(value: SortOption) {
-    setSort(value);
-    setSortModalVisible(false);
-  }
+  const toggleWishlist = (id: string) => {
+    setWishlist((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
-  function renderProduct({ item }: { item: Product }) {
-    return (
-      <View style={styles.cardWrapper}>
-        <ProductCard
-          product={item}
-          wishlisted={wishlistState.productIds.has(item.id)}
-          onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
-          onWishlistToggle={() => toggleWishlist(item.id)}
-        />
-      </View>
-    );
-  }
+  const renderItem = ({ item }: { item: Product }) => (
+    <View style={{ flex: 1 }}>
+      <ProductCard
+        product={item}
+        wishlisted={wishlist.has(item.id)}
+        onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+        onWishlistToggle={() => toggleWishlist(item.id)}
+      />
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Figma header: "Found X Results" + Filter button */}
-      <View style={styles.subHeader}>
-        <View>
-          <Text style={styles.foundLabel}>Found</Text>
-          <Text style={styles.resultCount}>
-            {displayedProducts.length} Results
-          </Text>
-        </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={[styles.header, { paddingHorizontal: H_PAD }]}>
         <TouchableOpacity
-          style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
-          onPress={openFilterModal}
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
           accessibilityRole="button"
-          accessibilityLabel="Filter products"
+          accessibilityLabel="Go back"
         >
-          <Text style={styles.filterButtonText}>
-            {hasActiveFilters ? '● Filter' : 'Filter'} ▾
-          </Text>
+          <FontAwesome5 name="chevron-left" size={ms(16)} color={Colors.black} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{categoryName}</Text>
+      </View>
+
+      {/* Results + Filter row */}
+      <View style={[styles.subHeader, { paddingHorizontal: H_PAD }]}>
+        <Text style={styles.resultsText}>
+          Found{'\n'}
+          <Text style={styles.resultsCount}>{isLoading ? '...' : `${products.length} Results`}</Text>
+        </Text>
+        <TouchableOpacity style={styles.filterBtn} accessibilityRole="button" accessibilityLabel="Filter">
+          <Text style={styles.filterText}>Filter</Text>
+          <FontAwesome5 name="chevron-down" size={ms(11)} color={Colors.black} />
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={displayedProducts}
+        data={products}
         keyExtractor={(item) => item.id}
-        renderItem={renderProduct}
+        renderItem={renderItem}
         numColumns={2}
-        contentContainerStyle={styles.grid}
+        columnWrapperStyle={{ gap: GAP, paddingHorizontal: H_PAD }}
+        contentContainerStyle={{ paddingTop: ms(12), paddingBottom: ms(80), gap: GAP }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No products found.</Text>
-          </View>
+          isLoading ? (
+            <ActivityIndicator size="large" color={Colors.black} style={{ marginTop: 60 }} />
+          ) : error ? (
+            <Text style={styles.empty}>{error}</Text>
+          ) : (
+            <Text style={styles.empty}>No products found in this category.</Text>
+          )
         }
       />
-
-      {/* Filter Modal */}
-      <Modal
-        visible={filterModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setFilterModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <Pressable style={styles.modalOverlay} onPress={() => setFilterModalVisible(false)} />
-          <View style={styles.modalSheet}>
-          <Text style={styles.modalTitle}>Filter</Text>
-          <Text style={styles.filterLabel}>Price Range ($)</Text>
-          <View style={styles.priceRow}>
-            <TextInput
-              style={styles.priceInput}
-              placeholder="Min"
-              placeholderTextColor={Colors.gray400}
-              keyboardType="numeric"
-              value={priceMinDraft}
-              onChangeText={setPriceMinDraft}
-              accessibilityLabel="Minimum price"
-            />
-            <Text style={styles.priceSeparator}>–</Text>
-            <TextInput
-              style={styles.priceInput}
-              placeholder="Max"
-              placeholderTextColor={Colors.gray400}
-              keyboardType="numeric"
-              value={priceMaxDraft}
-              onChangeText={setPriceMaxDraft}
-              accessibilityLabel="Maximum price"
-            />
-          </View>
-          <Text style={styles.filterLabel}>Sizes</Text>
-          <View style={styles.sizeRow}>
-            {SIZE_OPTIONS.map((size) => {
-              const selected = selectedSizesDraft.includes(size);
-              return (
-                <TouchableOpacity
-                  key={size}
-                  style={[styles.sizeChip, selected && styles.sizeChipSelected]}
-                  onPress={() => toggleSizeDraft(size)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: selected }}
-                  accessibilityLabel={`Size ${size}`}
-                >
-                  <Text style={[styles.sizeChipText, selected && styles.sizeChipTextSelected]}>
-                    {size}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <View style={styles.modalActions}>
-            <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-              <Text style={styles.clearButtonText}>Clear All</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
-              <Text style={styles.applyButtonText}>Apply</Text>
-            </TouchableOpacity>
-          </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Sort Modal */}
-      <Modal
-        visible={sortModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setSortModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <Pressable style={styles.modalOverlay} onPress={() => setSortModalVisible(false)} />
-          <View style={styles.modalSheet}>
-          <Text style={styles.modalTitle}>Sort By</Text>
-          <ScrollView>
-            {SORT_OPTIONS.map((option) => {
-              const isSelected = state.filters.sortBy === option.value;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={styles.sortOption}
-                  onPress={() => applySort(option.value)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: isSelected }}
-                  accessibilityLabel={option.label}
-                >
-                  <Text style={[styles.sortOptionText, isSelected && styles.sortOptionTextSelected]}>
-                    {option.label}
-                  </Text>
-                  {isSelected && <Text style={styles.checkmark}>✓</Text>}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: Colors.white },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: ms(12),
+    gap: ms(12),
+  },
+  backBtn: {
+     width: scale(36),
+     height: scale(36),
+     borderRadius: scale(18),
     backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    
+  },
+  headerTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: '700',
+    color: Colors.black,
   },
   subHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
+    paddingBottom: ms(12),
   },
-  foundLabel: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: '700',
+  resultsText: {
+    fontFamily: 'Product Sans',
+    fontSize: Typography.fontSize.lg,
+     fontWeight: '700',
     color: Colors.black,
-    lineHeight: 28,
+    lineHeight: ms(30),
   },
-  resultCount: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: '700',
-    color: Colors.black,
-    lineHeight: 28,
-  },
-  filterButton: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.gray200,
-    borderRadius: BorderRadius.full,
-  },
-  filterButtonActive: {
-    borderColor: Colors.black,
-  },
-  filterButtonText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.gray800,
-    fontWeight: '500',
-  },
-  grid: {
-    paddingHorizontal: Spacing.xs,
-    paddingBottom: Spacing.lg,
-  },
-  cardWrapper: {
-    flex: 1,
-    maxWidth: '50%',
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: Spacing.xxl,
-  },
-  emptyText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.gray400,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: Colors.overlay,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    borderBottomLeftRadius: BorderRadius.xl,
-    borderBottomRightRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
-  },
-  modalTitle: {
+  resultsCount: {
+    fontFamily: 'Product Sans',
     fontSize: Typography.fontSize.lg,
     fontWeight: '700',
     color: Colors.black,
-    marginBottom: Spacing.md,
   },
-  filterLabel: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: '600',
-    color: Colors.gray800,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  priceRow: {
+  filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
-  priceInput: {
-    flex: 1,
+    gap: ms(6),
+    paddingHorizontal: ms(16),
+    paddingVertical: ms(8),
+    borderRadius: ms(20),
     borderWidth: 1,
     borderColor: Colors.gray200,
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    fontSize: Typography.fontSize.base,
-    color: Colors.black,
   },
-  priceSeparator: {
-    fontSize: Typography.fontSize.base,
+  filterText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.black,
+    fontWeight: '500',
+  },
+  empty: {
+    textAlign: 'center',
+    marginTop: ms(60),
     color: Colors.gray600,
-  },
-  sizeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  sizeChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderWidth: 1,
-    borderColor: Colors.gray200,
-    borderRadius: BorderRadius.sm,
-  },
-  sizeChipSelected: {
-    borderColor: Colors.black,
-    backgroundColor: Colors.black,
-  },
-  sizeChipText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.gray800,
-  },
-  sizeChipTextSelected: {
-    color: Colors.white,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginTop: Spacing.sm,
-  },
-  clearButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.gray200,
-    borderRadius: BorderRadius.sm,
-    alignItems: 'center',
-  },
-  clearButtonText: {
     fontSize: Typography.fontSize.base,
-    color: Colors.gray800,
-  },
-  applyButton: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.black,
-    borderRadius: BorderRadius.sm,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.white,
-    fontWeight: '600',
-  },
-  sortOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.gray100,
-  },
-  sortOptionText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.gray800,
-  },
-  sortOptionTextSelected: {
-    color: Colors.black,
-    fontWeight: '600',
-  },
-  checkmark: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.black,
-    fontWeight: '700',
   },
 });

@@ -98,7 +98,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <View style={styles.info}>
         {/* Product name */}
 
-        <Text style={styles.name} numberOfLines={2}>    // Apply text styles & Limit text to 2 lines
+        <Text style={styles.name} numberOfLines={2}>    {/*Apply text styles & Limit text to 2 lines */}
+        
           {product.name}
         </Text>
         <View style={styles.priceRow}>   {/* Price row */}

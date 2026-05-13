@@ -37,12 +37,15 @@ export default function ProductListingScreen({ route, navigation }: Props) {
       setIsLoading(true);
       setError(null);
       try {
-        const all = await ProductService.getProducts(controller.signal);
-        const filtered = all.filter((p) => p.categoryId === categoryId);
-        setProducts(filtered);
+        const result = await ProductService.getProducts(
+          { categoryId },
+          controller.signal,
+        );
+        setProducts(result);
       } catch (err) {
-        if (err instanceof Error && err.message.includes('cancelled')) return;
-        // API not available — fall back to mock data from context
+        if (err instanceof Error && err.message === 'cancelled') return;
+        console.error('[ProductListing] API failed:', err instanceof Error ? err.message : err);
+        // Fall back to context products (API data if loaded, else mock)
         const filtered = state.products.filter((p) => p.categoryId === categoryId);
         setProducts(filtered);
       } finally {

@@ -22,6 +22,7 @@ import { useProducts } from '@context/ProductContext';
 import { useCart } from '@context/CartContext';
 import { useWishlist } from '@context/WishlistContext';
 import { ProductService } from '../services/productService';
+import { CartService } from '../services/cartService';
 import { Colors } from '@theme/tokens';
 import { scale, vs, ms } from '../utils/scale';
 
@@ -29,8 +30,8 @@ type Props = StackScreenProps<HomeStackParamList, 'ProductDetail'>;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window'); // fallback for StyleSheet
 
-function formatPrice(cents: number): string {
-  return `$ ${(cents / 100).toFixed(2)}`;
+function formatPrice(price: number): string {
+  return `$ ${price.toFixed(2)}`;
 }
 
 function StarRating({ rating, count, size = 16 }: { rating: number; count: number; size?: number }) {
@@ -71,9 +72,8 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
         const data = await ProductService.getProductById(productId, controller.signal);
         setProduct(data);
       } catch (err) {
-        if (err instanceof Error && err.message.includes('cancelled')) return;
+        if (err instanceof Error && err.message === 'cancelled') return;
         if (err instanceof Error && err.message.includes('API disabled')) {
-          // Fall back to local context cache
           const cached = productState.products.find((p) => p.id === productId);
           if (cached) setProduct(cached);
           return;
@@ -135,6 +135,10 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       selectedColor: selectedColor ?? '',
       quantity: 1,
     });
+    // Sync with API in background
+    CartService.addToCart(product.id, 1).catch((err) =>
+      console.warn('[Cart] add sync failed:', err.message),
+    );
     setShowSizePrompt(false);
   };
 

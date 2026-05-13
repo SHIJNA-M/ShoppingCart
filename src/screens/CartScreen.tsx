@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
+import { CartService } from '../services/cartService';
 import PrimaryButton from '../components/PrimaryButton';
 import { BorderRadius, Colors, Spacing, Typography } from '../theme/tokens';
 import { vs } from '../utils/scale';
@@ -22,10 +23,11 @@ import type { CartItem, CartStackParamList } from '../types';
 
 type CartNavProp = NativeStackNavigationProp<CartStackParamList, 'CartMain'>;
 
-const formatPrice = (cents: number) => `$ ${(cents / 100).toFixed(2)}`;
+// API returns whole dollar amounts e.g. 885 → "$ 885.00"
+const formatPrice = (price: number) => `$ ${price.toFixed(2)}`;
 
 export default function CartScreen() {
-  const { state, removeItem, updateQuantity } = useCart();
+  const { state, removeItem, updateQuantity, clearCart } = useCart();
   const { state: productState } = useProducts();
   const navigation = useNavigation<CartNavProp>();
   const insets = useSafeAreaInsets();
@@ -40,6 +42,23 @@ export default function CartScreen() {
   }, 0);
 
   const totalItems = state.items.reduce((sum, i) => sum + i.quantity, 0);
+
+  const handleRemove = (item: typeof cartItems[0]) => {
+    // Update local state immediately
+    removeItem(item.productId, item.selectedSize, item.selectedColor);
+    // Sync with API in background (fire and forget)
+    CartService.removeFromCart(item.productId).catch((err) =>
+      console.warn('[Cart] remove sync failed:', err.message),
+    );
+  };
+
+  const handleUpdateQty = (
+    item: typeof cartItems[0],
+    newQty: number,
+  ) => {
+    updateQuantity(item.productId, item.selectedSize, item.selectedColor, newQty);
+    // No direct quantity update API — remove + re-add handled locally
+  };
 
   const renderItem = ({ item }: { item: typeof cartItems[0] }) => {
     if (!item.product) return null;
@@ -60,9 +79,7 @@ export default function CartScreen() {
           <View style={styles.qtyRow}>
             <TouchableOpacity
               style={styles.qtyBtn}
-              onPress={() =>
-                updateQuantity(item.productId, item.selectedSize, item.selectedColor, item.quantity - 1)
-              }
+              onPress={() => handleUpdateQty(item, item.quantity - 1)}
               accessibilityLabel="Decrease quantity"
             >
               <Text style={styles.qtyBtnText}>−</Text>
@@ -70,9 +87,7 @@ export default function CartScreen() {
             <Text style={styles.qtyValue}>{item.quantity}</Text>
             <TouchableOpacity
               style={styles.qtyBtn}
-              onPress={() =>
-                updateQuantity(item.productId, item.selectedSize, item.selectedColor, item.quantity + 1)
-              }
+              onPress={() => handleUpdateQty(item, item.quantity + 1)}
               accessibilityLabel="Increase quantity"
             >
               <Text style={styles.qtyBtnText}>+</Text>
@@ -81,7 +96,7 @@ export default function CartScreen() {
         </View>
         <TouchableOpacity
           style={styles.removeBtn}
-          onPress={() => removeItem(item.productId, item.selectedSize, item.selectedColor)}
+          onPress={() => handleRemove(item)}
           accessibilityLabel="Remove item"
         >
           <Text style={styles.removeBtnText}>✕</Text>

@@ -18,9 +18,9 @@ interface ProductCardProps {
 }
 
 
-// Function to convert cents into formatted currency string
-// Example: 4999 -> "$ 49.99"
-const formatPrice = (cents: number): string => `$ ${(cents / 100).toFixed(2)}`;
+// Function to convert price into formatted currency string
+// API returns whole dollar amounts e.g. 885 -> "$ 885.00"
+const formatPrice = (price: number): string => `$ ${price.toFixed(2)}`;
 
 
 // Create ProductCard functional component
@@ -39,6 +39,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const imageUri = product.images[0] ?? '';
 
   // Derive a fake original price (~20% higher) for the strikethrough display
+  //999 * 1.2 = 1198.8
   const originalPrice = Math.round(product.price * 1.2);
 
 
@@ -102,9 +103,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
         
           {product.name}
         </Text>
-        <View style={styles.priceRow}>   {/* Price row */}
-          <Text style={styles.salePrice}>{formatPrice(product.price)}</Text>    {/* Format product price */} {/* Original crossed-out price */}
-          <Text style={styles.originalPrice}>{formatPrice(originalPrice)}</Text>    {/* Original crossed-out price */}    {/* Format original price */}
+        <View style={styles.priceRow}>
+          <Text style={styles.salePrice}>{formatPrice(product.price)}</Text>
+          <Text style={styles.originalPrice}>{formatPrice(originalPrice)}</Text>
         </View>
 
 

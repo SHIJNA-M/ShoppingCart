@@ -34,13 +34,13 @@ type ProductAction =
 // ── Initial state ─────────────────────────────────────────
 
 const initialState: ProductState = {
-  products: mockProducts,
-  categories: mockCategories,
+  products: [],
+  categories: [],
   filters: {
     categoryId: null,
     sortBy: 'newest',
   },
-  isLoading: false,
+  isLoading: true,
   error: null,
 };
 
@@ -115,21 +115,22 @@ export function ProductProvider({ children }: ProductProviderProps) {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
       try {
+        console.log('[ProductContext] Starting API fetch...');
         const [categories, products] = await Promise.all([
           ProductService.getCategories(controller.signal),
-          ProductService.getProducts(controller.signal),
+          ProductService.getProducts({}, controller.signal),
         ]);
+        console.log('[ProductContext] SUCCESS —', categories.length, 'categories,', products.length, 'products');
         dispatch({ type: 'LOAD_CATEGORIES', payload: categories });
         dispatch({ type: 'LOAD_PRODUCTS', payload: products });
       } catch (error) {
-        // Ignore abort errors — they're intentional on unmount
-        if (error instanceof Error && error.message.includes('cancelled')) return;
-        // Ignore the mock-data fallback flag — not a real error
-        if (error instanceof Error && error.message.includes('API disabled')) return;
+        if (error instanceof Error && error.message === 'cancelled') return;
         const message = error instanceof Error ? error.message : 'Failed to load data';
-        console.warn('[ProductContext] API fetch failed, using mock data:', message);
+        console.error('[ProductContext] FAILED:', message);
+        // Fall back to mock data so app is still usable
+        dispatch({ type: 'LOAD_CATEGORIES', payload: mockCategories });
+        dispatch({ type: 'LOAD_PRODUCTS', payload: mockProducts });
         dispatch({ type: 'SET_ERROR', payload: message });
-        // Keep mock data as fallback — already loaded in initialState
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext (HTTP) traffic to the API server -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">144.202.25.149</domain>
+    </domain-config>
+    <!-- Allow cleartext for localhost (Metro bundler / dev server) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

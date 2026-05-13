@@ -21,78 +21,18 @@ import { ms } from '../utils/scale';
 
 type Props = StackScreenProps<HomeStackParamList, 'Category'>;
 
-const CARD_COLORS: Record<string, string> = {
-  'cat-clothing': '#A3A798',
-  'cat-accessories': '#898280',
-  'cat-shoes': '#44565C',
-  'cat-bags': '#B9AEB2',
-};
-
-const IMG_RESIZE: Record<string, 'cover' | 'contain'> = {
-  'cat-clothing': 'contain',
-  'cat-accessories': 'contain',
-  'cat-shoes': 'contain',
-  'cat-bags': 'contain',
-};
-
-/**
- * Figma base frame: 375px wide
- * Card: 313×126px → ratios: W*0.835 × W*0.336
- * Outer circle: 123×126, left:188 → right = (313-188-123)/313 of card = near right edge
- * Inner circle: 75×75, left:200, top:25
- * Image: right half of card, portrait, overflows top
- */
-const IMG_CONFIG: Record<string, {
-  widthRatio: number;
-  heightRatio: number;
-  overflowRatio: number;
-  right: number;
-  anchor: 'top' | 'bottom';
-}> = {
-
-  'cat-clothing': {
-    widthRatio: 0.46,
-    heightRatio: 0.82,
-    overflowRatio: 0.10,
-    anchor: 'top',
-    right: -4,
-  },
-
-  'cat-accessories': {
-    widthRatio: 0.52,
-    heightRatio: 0.48,
-    overflowRatio: 0.00,
-    anchor: 'bottom',
-    right: -10,
-  },
-
-  'cat-shoes': {
-    widthRatio: 0.52,
-    heightRatio: 0.72,
-    overflowRatio: 0.10,
-    anchor: 'top',
-    right: 15,
-  },
-
-  'cat-bags': {
-    widthRatio: 0.40,
-    heightRatio: 0.76,
-    overflowRatio: 0.10,
-    anchor: 'top',
-    right: -4,
-  },
-};
+// Fallback palette — cycles through when API category has no custom color
+const PALETTE = ['#A3A798', '#898280', '#44565C', '#B9AEB2', '#6B7C8A', '#8A7B6B', '#5C6B44', '#7C8A6B'];
 
 export default function CategoryScreen({ navigation }: Props) {
   const { state } = useProducts();
   const [q, setQ] = useState('');
   const { width: W } = useWindowDimensions();
 
-  // Figma base: 375px. Card: 313×126. Circles from Figma specs.
-  const CARD_H = W * 0.40;   // 126/375
+  const CARD_H = W * 0.40;
   const RADIUS = W * 0.05;
-  const CIRCLE = W * 0.328;   // outer: 123/375
-  const CIRCLE2 = W * 0.200;   // inner: 75/375
+  const CIRCLE = W * 0.328;
+  const CIRCLE2 = W * 0.200;
 
   const categories = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -100,19 +40,10 @@ export default function CategoryScreen({ navigation }: Props) {
     return state.categories.filter((c) => c.name.toLowerCase().includes(query));
   }, [state.categories, q]);
 
-  const renderItem = ({ item }: { item: Category }) => {
-    const bg = CARD_COLORS[item.id] ?? '#888';
-    const cfg = IMG_CONFIG[item.id] ?? { widthRatio: 0.46, heightRatio: 0.50, overflowRatio: 0.06, anchor: 'top' as const };
-
-    const IMG_W = W * cfg.widthRatio;
-    const OVERFLOW = W * cfg.overflowRatio;
-    const IMG_H = CARD_H;   // image height = card height exactly
-
-    // anchor: 'top' → slight overflow above (top: -OVERFLOW)
-    // anchor: 'bottom' → flush with card bottom
-    const imgPosition = cfg.anchor === 'top'
-      ? { bottom: 0, top: undefined }   // bottom-anchor so image fills card, top peeks out via wrapper
-      : { bottom: 0, top: undefined };
+  const renderItem = ({ item, index }: { item: Category; index: number }) => {
+    const bg = item.color ?? PALETTE[index % PALETTE.length]!;
+    const IMG_W = W * 0.46;
+    const IMG_H = CARD_H;
 
     return (
       <TouchableOpacity
@@ -125,7 +56,7 @@ export default function CategoryScreen({ navigation }: Props) {
         accessibilityLabel={item.name}
         style={{ height: CARD_H + W * 0.08, marginBottom: W * 0.04 }}
       >
-        {/* ── Card — circles + label only, overflow:hidden clips circles ── */}
+        {/* Card background with circles and label */}
         <View style={{
           position: 'absolute',
           left: 0, right: 0, bottom: 0,
@@ -137,25 +68,21 @@ export default function CategoryScreen({ navigation }: Props) {
           {/* Outer circle */}
           <View style={{
             position: 'absolute',
-            width: CIRCLE,
-            height: CIRCLE,
+            width: CIRCLE, height: CIRCLE,
             borderRadius: CIRCLE / 2,
             backgroundColor: 'rgba(255,255,255,0.18)',
             right: W * 0.10,
             top: (CARD_H - CIRCLE) / 2,
           }} />
-
           {/* Inner circle */}
           <View style={{
             position: 'absolute',
-            width: CIRCLE2,
-            height: CIRCLE2,
+            width: CIRCLE2, height: CIRCLE2,
             borderRadius: CIRCLE2 / 2,
             backgroundColor: 'rgba(255,255,255,0.13)',
             right: W * 0.16,
             top: CARD_H * 0.198,
           }} />
-
           {/* Label */}
           <Text style={{
             position: 'absolute',
@@ -170,7 +97,7 @@ export default function CategoryScreen({ navigation }: Props) {
           </Text>
         </View>
 
-        {/* ── Image OUTSIDE card — no clipping, free to overflow ── */}
+        {/* Image — outside card so it can overflow top */}
         <Image
           source={
             typeof item.imageUrl === 'number'
@@ -180,12 +107,12 @@ export default function CategoryScreen({ navigation }: Props) {
           style={{
             position: 'absolute',
             right: 0,
-            ...imgPosition,
+            bottom: 0,
             width: IMG_W,
             height: IMG_H,
             zIndex: 10,
           }}
-          resizeMode={IMG_RESIZE[item.id] ?? 'contain'}
+          resizeMode="cover"
           accessibilityLabel={item.name}
         />
       </TouchableOpacity>
@@ -256,20 +183,16 @@ export default function CategoryScreen({ navigation }: Props) {
         renderItem={renderItem}
         contentContainerStyle={{
           paddingHorizontal: W * 0.05,
-          paddingTop: W * 0.04,   // max overflow across all categories
+          paddingTop: W * 0.04,
           paddingBottom: W * 0.22,
         }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           state.isLoading ? (
-            <ActivityIndicator
-              size="large"
-              color={Colors.black}
-              style={{ marginTop: 60 }}
-            />
+            <ActivityIndicator size="large" color={Colors.black} style={{ marginTop: 60 }} />
           ) : state.error ? (
-            <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.error }}>
-              {state.error}
+            <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.error, paddingHorizontal: 20 }}>
+              API Error: {state.error}
             </Text>
           ) : (
             <Text style={{ textAlign: 'center', marginTop: 40, color: Colors.gray600 }}>

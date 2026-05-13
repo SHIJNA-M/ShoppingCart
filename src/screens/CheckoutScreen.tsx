@@ -178,12 +178,12 @@ export default function CheckoutScreen({ route, navigation }: Props) {
         {/* Shipping Address */}
         <Text style={[styles.sectionTitle, { fontSize: ms(15) }]}>Shipping Address</Text>
         <View style={[styles.addressCard, { borderRadius: scale(12), marginBottom: vs(20) }]}>
-          {field('Full Name', 'fullName', 'John Doe')}
+          {field('Full Name', 'fullName', 'full name')}
           {field('Phone', 'phone', '+91 9876543210', 'phone-pad')}
           {field('Street', 'street', '123 Main Street')}
-          {field('City', 'city', 'Mumbai')}
-          {field('State', 'state', 'Maharashtra')}
-          {field('ZIP Code', 'zipCode', '400001', 'numeric')}
+          {field('City', 'city', 'kochi')}
+          {field('State', 'state', 'kerala')}
+          {field('ZIP Code', 'zipCode', '682001', 'numeric')}
           {field('Country', 'country', 'India')}
           {addressError && (
             <Text style={styles.addressError}>{addressError}</Text>

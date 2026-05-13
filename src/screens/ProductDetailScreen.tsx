@@ -138,14 +138,17 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const isWishlisted = wishlistState.productIds.has(product.id);
 
   const handleAddToCart = () => {
-    if (!selectedSize) { setShowSizePrompt(true); return; }
+    // Only require size selection if the product actually has size options
+    if (product.sizeOptions?.length > 0 && !selectedSize) {
+      setShowSizePrompt(true);
+      return;
+    }
     addItem({
       productId: product.id,
-      selectedSize,
+      selectedSize: selectedSize ?? '',
       selectedColor: selectedColor ?? '',
       quantity: 1,
     });
-    // Sync with API in background
     CartService.addToCart(product.id, 1).catch((err) =>
       console.warn('[Cart] add sync failed:', err.message),
     );

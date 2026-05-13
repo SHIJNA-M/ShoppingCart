@@ -1,132 +1,87 @@
-import React from 'react'; // Import React library
+import React from 'react';
 import {
   Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native'; // Import required React Native UI components
-import { Colors, Spacing, Typography } from '../theme/tokens'; // Import reusable theme constants
-import type { Product } from '../types'; // Import Product TypeScript type
+} from 'react-native';
+import { Colors, Spacing, Typography } from '../theme/tokens';
+import type { Product } from '../types';
 
-// Define props structure for ProductCard component
 interface ProductCardProps {
-  product: Product; // Product object containing all product details
-  wishlisted: boolean; // Whether product is in wishlist or not
-  onPress: () => void;    // Function triggered when card pressed
-  onWishlistToggle: () => void;  // Function triggered when wishlist button pressed
+  product: Product;
+  wishlisted: boolean;
+  onPress: () => void;
+  onWishlistToggle: () => void;
 }
 
-
-// Function to convert price into formatted currency string
-// API returns whole dollar amounts e.g. 885 -> "$ 885.00"
+// API returns whole dollar amounts e.g. 885 → "$ 885.00"
 const formatPrice = (price: number): string => `$ ${price.toFixed(2)}`;
 
-
-// Create ProductCard functional component
 const ProductCard: React.FC<ProductCardProps> = ({
-
-    // Extract props directly
-
   product,
   wishlisted,
   onPress,
   onWishlistToggle,
 }) => {
-
-    // Get first image from product images array
-  // If undefined/null, use empty string
   const imageUri = product.images[0] ?? '';
-
-  // Derive a fake original price (~20% higher) for the strikethrough display
-  //999 * 1.2 = 1198.8
   const originalPrice = Math.round(product.price * 1.2);
 
-
-
-   // Return component UI
   return (
-
-
-     // Main clickable product card
     <TouchableOpacity
-
-      style={styles.card} // Apply card styles      
-      onPress={onPress} // Function called when card pressed
-      activeOpacity={0.8} // Opacity effect when pressed
-      accessibilityRole="button" // Accessibility role for screen readers
-      accessibilityLabel={`${product.name}, ${formatPrice(product.price)}`} // Accessibility label
-      // Example: "Nike Shoes, $49.99"
+      style={styles.card}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${product.name}, ${formatPrice(product.price)}`}
     >
-
-       {/* Image container */}
       <View style={styles.imageContainer}>
-        {/* Product image */}
         <Image
-        // Image source logic
-          // If local image -> use directly
-          // Else -> use uri object for remote image
           source={typeof imageUri === 'number' ? imageUri : { uri: imageUri as string }}
-          
-          style={styles.image}    // Apply image styles
-          resizeMode="cover"   // Make image cover entire area
-          accessibilityLabel={`Image of ${product.name}`} // Accessibility label
+          style={styles.image}
+          resizeMode="cover"
+          accessibilityLabel={`Image of ${product.name}`}
         />
-
-          {/* Wishlist heart button */}
         <TouchableOpacity
-
-          style={styles.wishlistButton}  // Apply wishlist button styles
-          onPress={onWishlistToggle}    // Function called when heart pressed
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}   // Increase touchable area
-          accessibilityRole="button"   // Accessibility role
-          accessibilityLabel={   // Dynamic accessibility label
-            wishlisted ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`
+          style={styles.wishlistButton}
+          onPress={onWishlistToggle}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={
+            wishlisted
+              ? `Remove ${product.name} from wishlist`
+              : `Add ${product.name} to wishlist`
           }
-          accessibilityState={{ selected: wishlisted }}  // Accessibility selected state
+          accessibilityState={{ selected: wishlisted }}
         >
-
-           {/* Heart icon */}
-          <Text   // Merge multiple style 
-          style={[styles.heartIcon, wishlisted ? styles.heartActive : styles.heartInactive]}>
-            {wishlisted ? '♥' : '♥'} {/* Heart icon character */}
+          <Text style={[styles.heartIcon, wishlisted ? styles.heartActive : styles.heartInactive]}>
+            {wishlisted ? '♥' : '♥'}
           </Text>
         </TouchableOpacity>
       </View>
 
-
-        {/* Product information section */}
       <View style={styles.info}>
-        {/* Product name */}
-
-        <Text style={styles.name} numberOfLines={2}>    {/*Apply text styles & Limit text to 2 lines */}
-        
+        <Text style={styles.name} numberOfLines={2}>
           {product.name}
         </Text>
         <View style={styles.priceRow}>
           <Text style={styles.salePrice}>{formatPrice(product.price)}</Text>
           <Text style={styles.originalPrice}>{formatPrice(originalPrice)}</Text>
         </View>
-
-
-        {/* Star rating */}
-        <View style={styles.ratingRow}>  {/* Create 5 stars dynamically */}
+        <View style={styles.ratingRow}>
           {[1, 2, 3, 4, 5].map((star) => (
             <Text
-              key={star}   // Unique key for React rendering
-              style={[   // Merge star styles
-                styles.star,  // Base star style
-                star <= Math.round(product.rating) ? styles.starFilled : styles.starEmpty,    // Filled or empty star color
+              key={star}
+              style={[
+                styles.star,
+                star <= Math.round(product.rating) ? styles.starFilled : styles.starEmpty,
               ]}
             >
               ★
             </Text>
           ))}
-
-   
-            {/* Review count */}
-
-          <Text style={styles.reviewCount}>({product.reviewCount})</Text>  {/* Display total reviews */}
+          <Text style={styles.reviewCount}>({product.reviewCount})</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -175,7 +130,6 @@ const styles = StyleSheet.create({
   },
   heartInactive: {
     color: '#D8D8D8',
-
   },
   info: {
     padding: Spacing.sm,

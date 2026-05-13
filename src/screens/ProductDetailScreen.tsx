@@ -61,6 +61,7 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,17 +72,30 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
       try {
         const data = await ProductService.getProductById(productId, controller.signal);
         setProduct(data);
+        // Fetch related products using the product's categoryId
+        try {
+          const related = await ProductService.getRelatedProducts(
+            data.categoryId,
+            data.id,
+            controller.signal,
+          );
+          setSimilarProducts(related);
+        } catch {
+          // Related products are non-critical — fall back to context
+          const fallback = productState.products
+            .filter((p) => p.categoryId === data.categoryId && p.id !== data.id)
+            .slice(0, 6);
+          setSimilarProducts(fallback);
+        }
       } catch (err) {
         if (err instanceof Error && err.message === 'cancelled') return;
-        if (err instanceof Error && err.message.includes('API disabled')) {
-          const cached = productState.products.find((p) => p.id === productId);
-          if (cached) setProduct(cached);
-          return;
-        }
-        // Fallback: try to find in local context cache
         const cached = productState.products.find((p) => p.id === productId);
         if (cached) {
           setProduct(cached);
+          const fallback = productState.products
+            .filter((p) => p.categoryId === cached.categoryId && p.id !== cached.id)
+            .slice(0, 6);
+          setSimilarProducts(fallback);
         } else {
           setFetchError(err instanceof Error ? err.message : 'Failed to load product');
         }
@@ -122,10 +136,6 @@ export default function ProductDetailScreen({ route, navigation }: Props) {
   }
 
   const isWishlisted = wishlistState.productIds.has(product.id);
-
-  const similarProducts = product.similarProductIds
-    .map((id) => productState.products.find((p) => p.id === id))
-    .filter((p): p is NonNullable<typeof p> => p !== undefined);
 
   const handleAddToCart = () => {
     if (!selectedSize) { setShowSizePrompt(true); return; }

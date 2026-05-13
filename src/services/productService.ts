@@ -209,4 +209,22 @@ export const ProductService = {
     const data = await post<ApiProduct>('/products/single', { productId }, signal);
     return mapProduct(data);
   },
+
+  /**
+   * POST /products/related
+   * Body: { categoryId, productId, limit }
+   */
+  getRelatedProducts: async (
+    categoryId: string,
+    productId: string,
+    signal?: AbortSignal,
+  ): Promise<Product[]> => {
+    const raw = await post<unknown>(
+      '/products/related',
+      { categoryId, productId, limit: 6 },
+      signal,
+    );
+    const arr = extractProducts(raw);
+    return arr.map(mapProduct);
+  },
 };
